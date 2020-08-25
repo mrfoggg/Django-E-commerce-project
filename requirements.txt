@@ -1,4 +1,4 @@
-Django==3.0.6
+Django==3.1
 django-debug-toolbar==2.2
 django-filebrowser==3.12.1
 django-grappelli==2.14.2

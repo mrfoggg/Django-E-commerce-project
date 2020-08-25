@@ -1,4 +1,3 @@
-from django.contrib.postgres.fields import JSONField
 from django.db import models
 from mptt.models import MPTTModel
 from mptt.fields import TreeForeignKey
@@ -9,25 +8,28 @@ from django.core.exceptions import ValidationError
 from django.db.models import Max
 from .utils import get_unique_slug
 
+
 class Category(MPTTModel):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    parent = TreeForeignKey('self', blank=True, null=True, default=None, on_delete=models.CASCADE, related_name = 'children', db_index=True, verbose_name='Родительская категория')
-    slug= models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+    parent = TreeForeignKey('self', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                            related_name='children', db_index=True, verbose_name='Родительская категория')
+    slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
     description = models.TextField(blank=True, null=True, default=None, verbose_name='Описание категории')
     image = models.ImageField(upload_to='category_images/', blank=True, null=True, verbose_name='Фото категории')
     sign = models.ImageField(upload_to='category_sign/', blank=True, null=True, verbose_name='Значек категории')
-
 
     def self_attribute_group(self):
         groups = self.related_groups.all()
         ls = []
         for i in groups:
-            link_group = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(i.group_id,)), i.group)
+            link_group = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(i.group_id,)),
+                                                    i.group)
             ls.append(link_group)
         return mark_safe(', '.join(ls))
+
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
@@ -41,11 +43,12 @@ class Category(MPTTModel):
 
     def children_category(self):
         return self.children.filter(is_active=True)
+
     children_category = property(children_category)
 
     class MPTTMeta:
-        level_attr  =  'mptt_level'
-        order_insertion_by = [ 'name' ]
+        level_attr = 'mptt_level'
+        order_insertion_by = ['name']
 
     class Meta:
         verbose_name = "Категория товаров"
@@ -79,30 +82,43 @@ class Product(models.Model):
         (3, "3 мес."),
         (4, "14 дней"),
     )
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    slug= models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
-    art = models.CharField(max_length=10, blank=True, null=True, default=None, unique=True,  verbose_name='Артикул товара')
-    made_in = models.ForeignKey('Country', blank=True, null=True, default=None, on_delete=models.SET_NULL,  verbose_name='Страна производства')
-    brand = models.ForeignKey('Brand', blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Торговая марка')
+    slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+    art = models.CharField(max_length=10, blank=True, null=True, default=None, unique=True,
+                           verbose_name='Артикул товара')
+    made_in = models.ForeignKey('Country', blank=True, null=True, default=None, on_delete=models.SET_NULL,
+                                verbose_name='Страна производства')
+    brand = models.ForeignKey('Brand', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                              verbose_name='Торговая марка')
     description = models.TextField(blank=True, null=True, default=None, verbose_name='Описание товара')
-    rating = models.SmallIntegerField(choices = RATING, default = 1, db_index = True)
-    admin_category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.SET_NULL, verbose_name='Категория товаров админ-панели')
-    category_collection = models.ForeignKey('CategoryCollection', blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Коллекция категорий')
+    rating = models.SmallIntegerField(choices=RATING, default=1, db_index=True)
+    admin_category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.SET_NULL,
+                                    verbose_name='Категория товаров админ-панели')
+    category_collection = models.ForeignKey('CategoryCollection', blank=True, null=True, default=None,
+                                            on_delete=models.CASCADE, verbose_name='Коллекция категорий')
 
-    parameters = JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
-    parameters_structure = JSONField(default=dict, blank=True, verbose_name='Структура характеристик')
-    sorted_parameters_structure = JSONField(default=list, blank=True, verbose_name='Сортированная структура характеристик')
+    parameters = models.JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
+    parameters_structure = models.JSONField(default=dict, blank=True, verbose_name='Структура характеристик')
+    sorted_parameters_structure = models.JSONField(default=list, blank=True,
+                                                   verbose_name='Сортированная структура характеристик')
 
-    custom_order_group =  JSONField(default=list, blank=True, verbose_name='Индивидуальный порядок групп атрибутов для сочетания категорий')
-    is_active_custom_order_group = models.BooleanField(default=True, verbose_name='Использоватть порядок групп атрибутов определенный в коллекции категорий')
+    custom_order_group = models.JSONField(default=list, blank=True,
+                                          verbose_name='Индивидуальный порядок групп атрибутов для сочетания категорий')
+    is_active_custom_order_group = models.BooleanField(default=True,
+                                                       verbose_name='Использоватть порядок групп атрибутов '
+                                                                    'определенный в коллекции категорий')
 
-    shot_parameters_structure = JSONField(default=dict, blank=True, verbose_name='Структура кратких характеристик товара')
-    mini_parameters_structure = JSONField(default=dict, blank=True, verbose_name='Структура мини характеристик товара')
-    shot_parameters_custom_structure = JSONField(default=dict, blank=True, verbose_name='Структура кратких характеристик товара для сочетания категорий')
-    mini_parameters_custom_structure = JSONField(default=dict, blank=True, verbose_name='Структура мини характеристик товара для сочетания категорий')
+    shot_parameters_structure = models.JSONField(default=dict, blank=True,
+                                                 verbose_name='Структура кратких характеристик товара')
+    mini_parameters_structure = models.JSONField(default=dict, blank=True,
+                                                 verbose_name='Структура мини характеристик товара')
+    shot_parameters_custom_structure = models.JSONField(default=dict, blank=True,
+                                                        verbose_name='Структура кратких характеристик товара для сочетания категорий')
+    mini_parameters_custom_structure = models.JSONField(default=dict, blank=True,
+                                                        verbose_name='Структура мини характеристик товара для сочетания категорий')
 
     lenght = models.FloatField(blank=True, null=True, verbose_name='Длина, см')
     width = models.FloatField(blank=True, null=True, verbose_name='Ширина, см')
@@ -111,28 +127,33 @@ class Product(models.Model):
     width_box = models.FloatField(blank=True, null=True, verbose_name='Ширина упаковки, см')
     height_box = models.FloatField(blank=True, null=True, verbose_name='Высота упаковки, см')
     weight = models.FloatField(blank=True, null=True, verbose_name='Вес, кг')
-    warranty = models.SmallIntegerField(choices = WARRANTY, default = 1, verbose_name='Срок гарантии')
+    warranty = models.SmallIntegerField(choices=WARRANTY, default=1, verbose_name='Срок гарантии')
 
     def get_category_collection_link(self):
         # if self.category_collection_id is not None:
         if self.category_collection_id:
-            return mark_safe("<a href={}>{}</a>".format(reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)), "подробнее"))
+            return mark_safe("<a href={}>{}</a>".format(
+                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)), "подробнее"))
         else:
             return "Не назначена"
+
     get_category_collection_link.short_description = 'Коллекия категорий'
     get_category_collection_link = property(get_category_collection_link)
 
     def get_product_category_link(self):
         categories_link_list = []
         for cat in Category.objects.filter(related_products__product=self):
-            category_link = "<a href={}>{}</a>".format(reverse('admin:products_category_change', args=(cat.id,)), cat.name)
+            category_link = "<a href={}>{}</a>".format(reverse('admin:products_category_change', args=(cat.id,)),
+                                                       cat.name)
             categories_link_list.append(category_link)
         return mark_safe(', '.join(categories_link_list))
+
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
     def get_link_refresh(self):
         return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
+
     get_link_refresh = property(get_link_refresh)
 
     class Meta:
@@ -148,45 +169,50 @@ class Product(models.Model):
     #         self.slug = get_unique_slug(self, 'name', 'slug')
     #     super().save(*args, **kwargs)
 
-class ProductImage (models.Model):
-    name = models.CharField(max_length=128, blank=True, default='', db_index = True, verbose_name='Название')
+
+class ProductImage(models.Model):
+    name = models.CharField(max_length=128, blank=True, default='', db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    product = models.ForeignKey('Product', blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Товар')
+    product = models.ForeignKey('Product', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                                verbose_name='Товар')
     image = models.ImageField(upload_to='product_images/', blank=True, null=True, verbose_name='Фото товара')
     is_main_1 = models.BooleanField(default=True, verbose_name='Главное фото')
     is_main_2 = models.BooleanField(default=True, verbose_name='Главное фото при наведении')
     position = models.PositiveIntegerField("Position", null=True)
 
     def __str__(self):
-        return "%s" %self.name
+        return "%s" % self.name
 
     class Meta:
-            ordering = ('position',)
-            verbose_name = "Фотография товара"
-            verbose_name_plural = "Фотографии товаров"
+        ordering = ('position',)
+        verbose_name = "Фотография товара"
+        verbose_name_plural = "Фотографии товаров"
+
 
 class Country(models.Model):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    slug= models.SlugField(max_length=64, blank=True, null=True, default=None, unique=True)
+    slug = models.SlugField(max_length=64, blank=True, null=True, default=None, unique=True)
 
     class Meta:
         verbose_name = "Страна"
         verbose_name_plural = "Страны"
 
     def __str__(self):
-        return "%s" %self.name
+        return "%s" % self.name
+
 
 class Brand(models.Model):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    country = models.ForeignKey(Country, blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Страна брэнда')
+    country = models.ForeignKey(Country, blank=True, null=True, default=None, on_delete=models.CASCADE,
+                                verbose_name='Страна брэнда')
 
     def __str__(self):
         return "%s (%s)" % (self.name, self.country)
@@ -195,9 +221,12 @@ class Brand(models.Model):
         verbose_name = "Торговая марка"
         verbose_name_plural = "Торговые марки"
 
+
 class ProductInCategory(models.Model):
-    product = models.ForeignKey(Product, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Товар', related_name = 'related_categories')
-    category = TreeForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория', related_name = 'related_products')
+    product = models.ForeignKey(Product, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Товар',
+                                related_name='related_categories')
+    category = TreeForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория',
+                              related_name='related_products')
     position_category = models.PositiveIntegerField("PositionCategory", default=0)
     position_product = models.PositiveIntegerField("PositionProduct", default=0)
 
@@ -206,18 +235,19 @@ class ProductInCategory(models.Model):
         self.old_category = self.category_id
 
     class Meta:
-            verbose_name = "Размещение товара в категории "
-            verbose_name_plural = "Размещения товара в категории"
-            ordering = ('position_product',)
-            unique_together = ('product', 'category')
+        verbose_name = "Размещение товара в категории "
+        verbose_name_plural = "Размещения товара в категории"
+        ordering = ('position_product',)
+        unique_together = ('product', 'category')
 
     def __str__(self):
         name = Product.objects.filter(id=self.product_id).values_list('name')[0][0]
         category = Category.objects.filter(id=self.category_id).values_list('name')[0][0]
-        return '"%s" - %s' %(category, name)
+        return '"%s" - %s' % (category, name)
 
     def self_attribute_group(self):
         return self.category.self_attribute_group
+
     self_attribute_group.short_description = '--------------------------------------------------------------------------' \
                                              '---- Группы атрибутов------------------------------------------------------' \
                                              '-----------------------------------------'
@@ -228,26 +258,32 @@ class ProductInCategory(models.Model):
         groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id)
         # groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id',)
         categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category')
-        other_groups_allredy_in_product = AttrGroup.objects.filter(related_categories__category__id__in=categories_this_product)
+        other_groups_allredy_in_product = AttrGroup.objects.filter(
+            related_categories__category__id__in=categories_this_product)
         common_groups = groups_in_this_category.intersection(other_groups_allredy_in_product)
         if common_groups.exists():
             common_groups_names = map(lambda x: x[0], common_groups.values_list('name'))
             raise ValidationError(
-                'Новое значение содержит категорию или товар с дублирующейся группой атрибутов: "%s"' % ', '.join(common_groups_names)
+                'Новое значение содержит категорию или товар с дублирующейся группой атрибутов: "%s"' % ', '.join(
+                    common_groups_names)
             )
 
-    def create_attributes(self, *args, **kwargs):
-        if self.category.related_groups.filter(group__related_attributes__isnull = False):
+    def create_attributes(self):
+        if self.category.related_groups.filter(group__related_attributes__isnull=False):
             category_id = str(self.category_id)
-            self.product.parameters_structure[category_id] = {'cat_position': self.position_category, 'groups_attributes': {}}
-            for group_in_cat in self.category.related_groups.filter(group__related_attributes__isnull = False).select_related('group'):
+            self.product.parameters_structure[category_id] = {'cat_position': self.position_category,
+                                                              'groups_attributes': {}}
+            for group_in_cat in self.category.related_groups.filter(
+                    group__related_attributes__isnull=False).select_related('group'):
                 group_id = str(group_in_cat.group_id)
-                self.product.parameters_structure[category_id]['groups_attributes'][group_id] = {'group_position': group_in_cat.position, 'attributes': {}}
+                self.product.parameters_structure[category_id]['groups_attributes'][group_id] = {
+                    'group_position': group_in_cat.position, 'attributes': {}}
                 for atr_group in group_in_cat.group.related_attributes.select_related('attribute').all():
                     atr_id = str(atr_group.attribute_id)
-                    if not '%s-%s'%(group_id, atr_id) in self.product.parameters.keys():
-                        self.product.parameters['%s-%s'%(group_id, atr_id)] = None
-                    self.product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {'atr_position': atr_group.position}
+                    if not '%s-%s' % (group_id, atr_id) in self.product.parameters.keys():
+                        self.product.parameters['%s-%s' % (group_id, atr_id)] = None
+                    self.product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][
+                        atr_id] = {'atr_position': atr_group.position}
         self.product.save()
         # добавить соответствующую коллекцию категорий - сделано в BaseInlineFormSet
 
@@ -259,27 +295,28 @@ class ProductInCategory(models.Model):
             group_id = str(group.id)
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)
-                if '%s-%s'%(group_id, atr_id) in self.product.parameters:
-                    self.product.parameters.pop('%s-%s'%(group_id, atr_id))
+                if '%s-%s' % (group_id, atr_id) in self.product.parameters:
+                    self.product.parameters.pop('%s-%s' % (group_id, atr_id))
         self.product.save()
         # сделать удаление коллекции категорий из товара - сделано в BaseInlineFormSet
 
     def save(self, *args, **kwargs):
         self.product.refresh_from_db()
-        max_product_position = ProductInCategory.objects.filter(category_id=self.category_id).aggregate(Max('position_product'))
-        if not self.id or self.category_id!=self.old_category:
-        # if 0:
-            if max_product_position['position_product__max']!=None:
+        max_product_position = ProductInCategory.objects.filter(category_id=self.category_id).aggregate(
+            Max('position_product'))
+        if not self.id or self.category_id != self.old_category:
+            # if 0:
+            if max_product_position['position_product__max'] != None:
                 self.position_product = max_product_position['position_product__max'] + 1
             else:
                 self.position_product = 0
-        if self.old_category!=None and self.old_category != self.category_id:
+        if self.old_category != None and self.old_category != self.category_id:
             old_category_id = str(self.old_category)
             if old_category_id in self.product.parameters_structure.keys():
                 self.product.parameters_structure.pop(old_category_id)
             for group in AttrGroup.objects.filter(related_categories__category=self.old_category).values('id'):
                 for atr in Attribute.objects.filter(related_groups__group=group['id']).values('id'):
-                    self.product.parameters.pop('%s-%s'%(group['id'], atr['id']))
+                    self.product.parameters.pop('%s-%s' % (group['id'], atr['id']))
         super().save(*args, **kwargs)
         self.create_attributes(self)
         # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
@@ -288,19 +325,22 @@ class ProductInCategory(models.Model):
         self.delete_attributes(self)
         super().delete(*args, **kwargs)
 
+
 class AttrGroup(models.Model):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    slug= models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+    slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
 
     def self_attributes_links(self):
         list = []
         for i in self.related_attributes.all().order_by('position'):
-            link_atr = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(i.attribute.id,)), i.attribute.name)
+            link_atr = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(i.attribute.id,)),
+                                                  i.attribute.name)
             list.append(link_atr)
         return mark_safe(', '.join(list))
+
     self_attributes_links.short_description = '------------------------------------------------------------------------- ' \
                                               'Содержит атрибуты' \
                                               '--------------------------------------------------------------------------AttributesInGroup'
@@ -323,6 +363,7 @@ class AttrGroup(models.Model):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
+
 TYPE_OF_VALUE = (
     (1, "Текст"),
     (2, "Целое положит. число"),
@@ -330,16 +371,18 @@ TYPE_OF_VALUE = (
     (4, "Логический тип"),
     (5, "Вариант из фикс. значений"),
     (6, "Набор фикс. значений")
-    )
+)
+
+
 class Attribute(models.Model):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    slug= models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+    slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
     position = models.PositiveIntegerField("Position", blank=True, null=True)
-    type_of_value = models.SmallIntegerField(choices = TYPE_OF_VALUE, default = 1, verbose_name='Тип данных')
-    value_list = models.ManyToManyField('AttributeValue', blank=True, default=None, verbose_name= 'Список значений')
+    type_of_value = models.SmallIntegerField(choices=TYPE_OF_VALUE, default=1, verbose_name='Тип данных')
+    value_list = models.ManyToManyField('AttributeValue', blank=True, default=None, verbose_name='Список значений')
 
     def self_value_variants(self):
         values = self.value_list.all()
@@ -356,8 +399,8 @@ class Attribute(models.Model):
 
     def get_other_copy(self):
         copies = [0]
-        for atr in attribute.objects.filter(name__startswith = self.name + ' (@копия #'):
-            left_part_name = atr.name[(atr.name.find(' (@копия #')+10):]
+        for atr in Attribute.objects.filter(name__startswith=self.name + ' (@копия #'):
+            left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
             number_of_copy = int(left_part_name[:left_part_name.find(')')])
             copies.append(number_of_copy)
         return max(copies)
@@ -390,14 +433,17 @@ class Attribute(models.Model):
             self.slug = get_unique_slug(self, 'name', 'slug')
         super().save(*args, **kwargs)
 
+
 class AttributeValue(models.Model):
-    name = models.CharField(max_length=128, default=None, unique=True, db_index = True, verbose_name='Название')
+    name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
-    slug= models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+    slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
+
     def __str__(self):
-        return "%s" %self.name
+        return "%s" % self.name
+
     class Meta:
         verbose_name = "Значение атрибутов"
         verbose_name_plural = "Значения атрибутов"
@@ -407,9 +453,12 @@ class AttributeValue(models.Model):
             self.slug = get_unique_slug(self, 'name', 'slug')
         super().save(*args, **kwargs)
 
+
 class AttrGroupInCategory(models.Model):
-    category = TreeForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория товаров', related_name='related_groups')
-    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Группа атрибутов', related_name='related_categories')
+    category = TreeForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE,
+                              verbose_name='Категория товаров', related_name='related_groups')
+    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE,
+                              verbose_name='Группа атрибутов', related_name='related_categories')
     position = models.PositiveIntegerField("Position", blank=True, null=True, default=0)
 
     class Meta:
@@ -421,14 +470,17 @@ class AttrGroupInCategory(models.Model):
     def clean(self):
         # ищем товары для которых в их других категриях уже есть эта группа атрибутов
         products_this_category = Product.objects.filter(related_categories__category__id=self.category_id)
-        other_category_related_products = Category.objects.filter(related_products__product__in=products_this_category).exclude(id=self.category_id)
+        other_category_related_products = Category.objects.filter(
+            related_products__product__in=products_this_category).exclude(id=self.category_id)
         if self.old_category:
             other_category_related_products = other_category_related_products.exclude(id=self.old_category)
-        other_group_related_products = AttrGroup.objects.filter(related_categories__category__in=other_category_related_products)
+        other_group_related_products = AttrGroup.objects.filter(
+            related_categories__category__in=other_category_related_products)
         if self.group in other_group_related_products:
-            raise ValidationError("Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для некоторых товаров:" %
-                                  (self.group, self.category)
-                                  )
+            raise ValidationError(
+                "Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для некоторых товаров:" %
+                (self.group, self.category)
+                )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -440,6 +492,7 @@ class AttrGroupInCategory(models.Model):
 
     def self_attributes_links(self):
         return self.group.self_attributes_links
+
     self_attributes_links.short_description = '-------------------------------------------------------------------------' \
                                               ' Содержит атрибуты' \
                                               '-------------------------------------------------------------------------'
@@ -451,7 +504,7 @@ class AttrGroupInCategory(models.Model):
             attributes_list_structure[str(atr_in_gr[0])] = atr_in_gr[1]
         return attributes_list_structure
 
-# bulk edition
+    # bulk edition
     def create_attributes(self, *args, **kwargs):
         group_id = str(self.group_id)
         products_for_update = []
@@ -462,11 +515,13 @@ class AttrGroupInCategory(models.Model):
             if not category_id in product.parameters_structure.keys():
                 product.parameters_structure[category_id] = {'cat_position': category_position, 'groups_attributes': {}}
             if self.group.related_attributes.exists():
-                product.parameters_structure[category_id]['groups_attributes'][group_id] = {'group_position': self.position, 'attributes': {}}
+                product.parameters_structure[category_id]['groups_attributes'][group_id] = {
+                    'group_position': self.position, 'attributes': {}}
             for atr_id, position in self.get_self_atr_structure_list().items():
-                product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {'atr_position': position}
-                if not '%s-%s'%(group_id, atr_id) in product.parameters.keys():
-                    product.parameters['%s-%s'%(group_id, atr_id)] = None
+                product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
+                    'atr_position': position}
+                if not '%s-%s' % (group_id, atr_id) in product.parameters.keys():
+                    product.parameters['%s-%s' % (group_id, atr_id)] = None
             products_for_update.append(product)
         Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
         # добавить в группу в коллекции категорий
@@ -476,13 +531,15 @@ class AttrGroupInCategory(models.Model):
         category_id = str(self.category_id)
         group_id = str(self.group_id)
         products_for_update = []
-        for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure', 'parameters'):
-            if category_id in product.parameters_structure and group_id in product.parameters_structure[category_id]['groups_attributes']:
+        for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure',
+                                                                                               'parameters'):
+            if category_id in product.parameters_structure and group_id in product.parameters_structure[category_id][
+                'groups_attributes']:
                 product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
             if not product.parameters_structure[category_id]['groups_attributes']:
                 product.parameters_structure.pop(category_id)
             for atr_id in self.get_self_atr_structure_list().keys():
-                product.parameters.pop('%s-%s'%(group_id, atr_id))
+                product.parameters.pop('%s-%s' % (group_id, atr_id))
             products_for_update.append(product)
         Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -490,33 +547,34 @@ class AttrGroupInCategory(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         category_id = str(self.category_id)
-        if self.old_group!=None and self.old_group != self.group_id:
+        if self.old_group != None and self.old_group != self.group_id:
             old_group_id = str(self.old_group)
             attributes_id = []
             products_for_update = []
             for attribute in Attribute.objects.filter(related_groups__group=self.old_group).only('id'):
                 attributes_id.append(str(attribute.id))
-            for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure', 'parameters'):
+            for product in Product.objects.filter(related_categories__category=self.category).only(
+                    'parameters_structure', 'parameters'):
                 product.parameters_structure[category_id]['groups_attributes'].pop(old_group_id)
                 if not product.parameters_structure[category_id]['groups_attributes']:
                     product.parameters_structure.pop(category_id)
                 for atr_id in attributes_id:
-                    product.parameters.pop('%s-%s'%(old_group_id, atr_id))
+                    product.parameters.pop('%s-%s' % (old_group_id, atr_id))
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
-
-        if self.old_category!=None and self.old_category != self.category_id:
+        if self.old_category != None and self.old_category != self.category_id:
             old_category_id = str(self.old_category)
             group_attribute_id = str(self.group_id)
             products_for_update = []
-            for product in Product.objects.filter(related_categories__category=self.old_category).only('parameters_structure', 'parameters'):
+            for product in Product.objects.filter(related_categories__category=self.old_category).only(
+                    'parameters_structure', 'parameters'):
                 product.parameters_structure[old_category_id]['groups_attributes'].pop(group_attribute_id)
                 if not product.parameters_structure[old_category_id]['groups_attributes']:
                     product.parameters_structure.pop(old_category_id)
                 if not product.related_categories.filter(category=category_id).exists():
                     for atr_id in self.get_self_atr_structure_list().keys():
-                        product.parameters.pop('%s-%s'%(group_attribute_id, atr_id))
+                        product.parameters.pop('%s-%s' % (group_attribute_id, atr_id))
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -525,24 +583,31 @@ class AttrGroupInCategory(models.Model):
 
         self.create_attributes(self)
         for cc in CategoryCollection.objects.filter(category_list=self.category):
-            max_position = ItemOfCustomOrderGroup.objects.filter(category_collection_id=cc.id).aggregate(Max('position'))
-            ItemOfCustomOrderGroup.objects.create(category_collection_id=cc.id, category=self.category, group=self.group, position = max_position[
-                                                                                                                                         'position__max']+1)
+            max_position = ItemOfCustomOrderGroup.objects.filter(category_collection_id=cc.id).aggregate(
+                Max('position'))
+            ItemOfCustomOrderGroup.objects.create(category_collection_id=cc.id, category=self.category,
+                                                  group=self.group, position=max_position[
+                                                                                 'position__max'] + 1)
             cc.update_group_in_product()
-
 
     def delete(self, *args, **kwargs):
         self.delete_attributes(self)
         super().delete(*args, **kwargs)
         for cc in CategoryCollection.objects.filter(category_list=self.category):
             cc.update_group_in_product()
-        ShotParametersOfProduct.objects.filter(attribute__in=self.group.related_attributes.all(), category=self.category_id).delete()
-        MiniParametersOfProduct.objects.filter(attribute__in=self.group.related_attributes.all(), category=self.category_id).delete()
+        ShotParametersOfProduct.objects.filter(attribute__in=self.group.related_attributes.all(),
+                                               category=self.category_id).delete()
+        MiniParametersOfProduct.objects.filter(attribute__in=self.group.related_attributes.all(),
+                                               category=self.category_id).delete()
+
 
 class AttributesInGroup(models.Model):
-    attribute = models.ForeignKey(Attribute, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Атрибут', related_name='related_groups')
-    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Группа атрибутов', related_name = 'related_attributes')
+    attribute = models.ForeignKey(Attribute, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Атрибут',
+                                  related_name='related_groups')
+    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE,
+                              verbose_name='Группа атрибутов', related_name='related_attributes')
     position = models.PositiveIntegerField("Position", null=True)
+
     class Meta:
         verbose_name = "Атрибут группы"
         verbose_name_plural = "Атрибуты группы"
@@ -577,32 +642,36 @@ class AttributesInGroup(models.Model):
             group_id = str(self.group_id)
             atr_id = str(self.attribute_id)
             products_for_update = []
-            for product in Product.objects.filter(related_categories__category=category).only('parameters_structure', 'parameters'):
+            for product in Product.objects.filter(related_categories__category=category).only('parameters_structure',
+                                                                                              'parameters'):
                 if not category_id in product.parameters_structure.keys():
                     product.parameters_structure[category_id] = {'groups_attributes': {}, 'cat_position': cat.position}
                 if not group_id in product.parameters_structure[category_id]['groups_attributes'].keys():
-                    product.parameters_structure[category_id]['groups_attributes'][group_id] = {'attributes': {}, 'group_position': cat.position}
-                product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {'atr_position': self.position}
-                if not '%s-%s'%(group_id, atr_id) in product.parameters.keys():
-                    product.parameters['%s-%s'%(self.group.id, self.attribute.id)] = None
+                    product.parameters_structure[category_id]['groups_attributes'][group_id] = {'attributes': {},
+                                                                                                'group_position': cat.position}
+                product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
+                    'atr_position': self.position}
+                if not '%s-%s' % (group_id, atr_id) in product.parameters.keys():
+                    product.parameters['%s-%s' % (self.group.id, self.attribute.id)] = None
                 # product.save()
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
-# bulk edition
+    # bulk edition
     def delete_attributes(self, *args, **kwargs):
         for category in Category.objects.filter(related_groups__group=self.group).only('id'):
             category_id = str(category.id)
             group_id = str(self.group_id)
             atr_id = str(self.attribute_id)
             products_for_update = []
-            for product in Product.objects.filter(related_categories__category__related_groups__group=self.group).only('parameters', 'parameters_structure'):
+            for product in Product.objects.filter(related_categories__category__related_groups__group=self.group).only(
+                    'parameters', 'parameters_structure'):
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'].pop(atr_id)
                 if not product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes']:
-                     product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
+                    product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
                 if not product.parameters_structure[category_id]['groups_attributes']:
                     product.parameters_structure.pop(category_id)
-                product.parameters.pop('%s-%s'%(group_id, atr_id))
+                product.parameters.pop('%s-%s' % (group_id, atr_id))
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -612,9 +681,11 @@ class AttributesInGroup(models.Model):
         if self.old_attribute and self.old_attribute != self.attribute:
             for category in Category.objects.filter(related_groups__group=self.group_id):
                 products_for_update = []
-                for product in Product.objects.filter(related_categories__category=category.id).only('parameters', "parameters_structure"):
-                    product.parameters_structure[str(category.id)]['groups_attributes'][str(self.group_id)]['attributes'].pop(str(self.old_attribute))
-                    product.parameters.pop('%s-%s'%(str(self.group.id), str(self.old_attribute)))
+                for product in Product.objects.filter(related_categories__category=category.id).only('parameters',
+                                                                                                     "parameters_structure"):
+                    product.parameters_structure[str(category.id)]['groups_attributes'][str(self.group_id)][
+                        'attributes'].pop(str(self.old_attribute))
+                    product.parameters.pop('%s-%s' % (str(self.group.id), str(self.old_attribute)))
                     products_for_update.append(product)
                 Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
         self.create_attributes()
@@ -623,12 +694,16 @@ class AttributesInGroup(models.Model):
         self.delete_attributes(self)
         super().delete(*args, **kwargs)
 
+
 class CategoryCollection(models.Model):
-    category_list = TreeManyToManyField('Category', blank=True, default=None, verbose_name= 'Список категорий', )
+    category_list = TreeManyToManyField('Category', blank=True, default=None, verbose_name='Список категорий', )
     # additional_id = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, verbose_name='Дополнительный id')
-    is_active_custom_order_group = models.BooleanField(default=True, verbose_name='Применить индивидуальный порядок групп атрибутов')
-    is_active_custom_order_shot_parameters = models.BooleanField(default=True, verbose_name='Применить индивидуальный порядок кратких характеристик')
-    is_active_custom_order_mini_parameters = models.BooleanField(default=True, verbose_name='Применить индивидуальный порядок мини характеристик')
+    is_active_custom_order_group = models.BooleanField(default=True,
+                                                       verbose_name='Применить индивидуальный порядок групп атрибутов')
+    is_active_custom_order_shot_parameters = models.BooleanField(default=True,
+                                                                 verbose_name='Применить индивидуальный порядок кратких характеристик')
+    is_active_custom_order_mini_parameters = models.BooleanField(default=True,
+                                                                 verbose_name='Применить индивидуальный порядок мини характеристик')
 
     class Meta:
         verbose_name = "Набор категорий с индивидуальным порядком групп атрибутов"
@@ -637,10 +712,13 @@ class CategoryCollection(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        old_group_list = set(map(lambda x: x[0], ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list('group_id')))
+        old_group_list = set(map(lambda x: x[0],
+                                 ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
+                                     'group_id')))
 
-        if self.id!=None:
-            new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(related_categories__category__in=self.category_list.all())))
+        if self.id != None:
+            new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(
+                related_categories__category__in=self.category_list.all())))
         else:
             new_group_list = set()
 
@@ -649,7 +727,8 @@ class CategoryCollection(models.Model):
             ItemOfCustomOrderGroup.objects.filter(group_id__in=del_group_id, category_collection=self).delete()
 
     def update_group_in_product(self):
-        Product.objects.filter(category_collection_id=self.id).update(custom_order_group=list(map(lambda x: [x[0], x[1]], self.rel_group_iocog.order_by('position').values_list('category', 'group'))))
+        Product.objects.filter(category_collection_id=self.id).update(custom_order_group=list(
+            map(lambda x: [x[0], x[1]], self.rel_group_iocog.order_by('position').values_list('category', 'group'))))
 
     def __str__(self):
         if self.category_list.exists():
@@ -657,9 +736,12 @@ class CategoryCollection(models.Model):
         else:
             return ""
 
+
 class ItemOfCustomOrderGroup(models.Model):
-    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Группа атрибутов', related_name = 'rel_cat_collection_iocog')
-    category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE, verbose_name='Набор категорий', related_name = 'rel_group_iocog')
+    group = models.ForeignKey(AttrGroup, blank=True, null=True, on_delete=models.CASCADE,
+                              verbose_name='Группа атрибутов', related_name='rel_cat_collection_iocog')
+    category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
+                                            verbose_name='Набор категорий', related_name='rel_group_iocog')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
     position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
 
@@ -667,10 +749,12 @@ class ItemOfCustomOrderGroup(models.Model):
 
     def self_attributes_links(self):
         return self.group.self_attributes_links
-    self_attributes_links.short_description = '------------------------------------------------------Содержит атрибуты' \
+
+    self_attributes_links.short_description = '------------------------------------------------------Содержит атрибуты'
 
     def getlink_group(self):
         return self.group.getlink
+
     getlink_group.short_description = '--------------------------------Группа атрибутов---------------------------------'
 
     self_attributes_links = property(self_attributes_links)
@@ -682,17 +766,21 @@ class ItemOfCustomOrderGroup(models.Model):
     def __str__(self):
         return self.group.name
 
+
 class ShotParametersOfProduct(models.Model):
-    attribute = models.ForeignKey(AttributesInGroup, on_delete=models.CASCADE, verbose_name='Атрибут для отображения в кратких характеристиках')
-    category = TreeForeignKey('Category', blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Категория', related_name='related_shot_attributes')
-    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index = True, verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
+    attribute = models.ForeignKey(AttributesInGroup, on_delete=models.CASCADE,
+                                  verbose_name='Атрибут для отображения в кратких характеристиках')
+    category = TreeForeignKey('Category', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                              verbose_name='Категория', related_name='related_shot_attributes')
+    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
+                            verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в кратких характеристиках товара')
 
     position = models.PositiveIntegerField("Position", null=True)
+
     class Meta:
         verbose_name = "Атрибут для отображения в блоке кратких характеристик товара"
         verbose_name_plural = "Блок кратких характеристик товара"
-
 
     def __str__(self):
         if self.name:
@@ -700,10 +788,14 @@ class ShotParametersOfProduct(models.Model):
         else:
             return ' - "%s"' % self.attribute.attribute.name
 
+
 class MiniParametersOfProduct(models.Model):
-    attribute = models.ForeignKey(AttributesInGroup, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Атрибут для отображения в мини характеристиках')
-    category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.CASCADE, verbose_name='Категория', related_name='related_mini_attributes')
-    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index = True, verbose_name='Название для мини характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
+    attribute = models.ForeignKey(AttributesInGroup, blank=True, null=True, on_delete=models.CASCADE,
+                                  verbose_name='Атрибут для отображения в мини характеристиках')
+    category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.CASCADE,
+                              verbose_name='Категория', related_name='related_mini_attributes')
+    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
+                            verbose_name='Название для мини характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в мини характеристиках товара')
     position = models.PositiveIntegerField("Position", null=True)
 
