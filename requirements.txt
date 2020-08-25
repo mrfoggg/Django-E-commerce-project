@@ -1,0 +1,12 @@
+Django==3.0.6
+django-debug-toolbar==2.2
+django-filebrowser==3.12.1
+django-grappelli==2.14.2
+django-js-asset==1.2.2
+django-json-widget==1.0.1
+django-mptt==0.11.0
+django-summernote==0.8.11.6
+Pillow==7.1.2
+psycopg2==2.8.5
+PySnooper==0.4.1
+pytils==0.3

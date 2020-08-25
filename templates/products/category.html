@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h4>Товары категории "{{category.name}}"</h4>
+{% if products_list %}
+    <ul>
+    {% for product in products_list %}
+        <li>{{product.product.name}}</li>
+    {% endfor %}
+    </ul>
+{% else%}
+    <h5>В категории нет товаров</h5>
+{% endif %}
+
+{% endblock content %}
