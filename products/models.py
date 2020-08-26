@@ -268,7 +268,7 @@ class ProductInCategory(models.Model):
                     common_groups_names)
             )
 
-    def create_attributes(self):
+    def create_attributes(self, *args):
         if self.category.related_groups.filter(group__related_attributes__isnull=False):
             category_id = str(self.category_id)
             self.product.parameters_structure[category_id] = {'cat_position': self.position_category,
@@ -585,9 +585,12 @@ class AttrGroupInCategory(models.Model):
         for cc in CategoryCollection.objects.filter(category_list=self.category):
             max_position = ItemOfCustomOrderGroup.objects.filter(category_collection_id=cc.id).aggregate(
                 Max('position'))
+            if max_position['position__max'] is None:
+                position = 0
+            else:
+                position = max_position['position__max'] + 1
             ItemOfCustomOrderGroup.objects.create(category_collection_id=cc.id, category=self.category,
-                                                  group=self.group, position=max_position[
-                                                                                 'position__max'] + 1)
+                                                  group=self.group, position=position)
             cc.update_group_in_product()
 
     def delete(self, *args, **kwargs):
