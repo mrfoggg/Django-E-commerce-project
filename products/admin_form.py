@@ -1,10 +1,9 @@
 import itertools
 from django import forms
 from django.forms import HiddenInput
-from django.forms import NumberInput, TextInput
+from django.forms import TextInput
 from django.db.models import Count
 from .models import *
-from django.http import HttpResponseRedirect
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -169,6 +168,7 @@ class ProductForm(forms.ModelForm):
             err = mark_safe('Структура характеристик была изменена: ' + self.instance.get_link_refresh)
             raise forms.ValidationError(err)
 
+    # настройка полей для неграпелли версии
     class Meta:
         model = Product
         fields = '__all__'
@@ -224,39 +224,6 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet):
     def clean(self):
         super().clean()
 
-        self.instance.description = ''
-
-        def delete_attributes(category):
-            self.instance.description += 'Удалена категория %s <br>' % category
-
-            # if str(category.id) in self.instance.parameters_structure.keys():
-            #     self.product.parameters_structure.pop(str(category.id))
-            #
-            # for group in AttrGroup.objects.filter(related_categories__category=category.id).only('id'):
-            #     group_id = str(group.id)
-            #     for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
-            #         atr_id = str(atr.id)
-            #         if '%s-%s' % (group_id, atr_id) in self.product.parameters:
-            #             self.product.parameters.pop('%s-%s' % (group_id, atr_id))
-            
-        # def add_attributes(category):
-
-
-        def update_attributes(form_line):
-            # если категория добавлена
-            if form_line.initial == {}:
-                self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
-            # если категория изменена
-            elif 'category' in form_line.changed_data:
-                self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (
-                    Category.objects.get(id=form_line.initial['category']), form_line.cleaned_data['category'])
-            # если только изменен порядок следования категорий
-            else:
-                self.instance.description += "Изменен порядок категории %s на %s <br>" % (
-                    form_line.cleaned_data['category'], form_line.cleaned_data['position_category']
-                )
-
-
         if self.has_changed():
             if self.total_form_count() > 1:
                 list_of_query_groups = []
@@ -286,13 +253,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet):
                 new_category_set = set()
 
                 # цикл добавления id категорий для определения коллекции категорий после этого цикла.
-                # В этом же цикле добавление, изменение и удаление категорий в структуру и атрибуты товара
                 for form in self.forms:
-                    if self.can_delete and self._should_delete_form(form):
-                        delete_attributes(form.cleaned_data['category'])
-                        continue
-                    elif form.has_changed():
-                        update_attributes(form)
                     new_category_set.add(form.cleaned_data['category'].id)
 
                 def add_category_collection(category_set):
@@ -325,13 +286,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet):
 
                 else:
                     add_category_collection(new_category_set)
-            else:
-                for form in self.forms:
-                    if self.can_delete and self._should_delete_form(form):
-                        delete_attributes(form.cleaned_data['category'])
-                        continue
-                    elif form.has_changed():
-                        update_attributes(form)
+
 
 class AttrGroupForm(forms.ModelForm):
     class Meta:

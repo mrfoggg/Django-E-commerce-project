@@ -248,8 +248,8 @@ class ProductInCategory(models.Model):
     def self_attribute_group(self):
         return self.category.self_attribute_group
 
-    self_attribute_group.short_description = '--------------------------------------------------------------------------' \
-                                             '---- Группы атрибутов------------------------------------------------------' \
+    self_attribute_group.short_description = '----------------------------------------------------------------------' \
+                                             '---- Группы атрибутов--------------------------------------------------' \
                                              '-----------------------------------------'
     self_attribute_group = property(self_attribute_group)
 
