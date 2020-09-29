@@ -1,10 +1,12 @@
 import itertools
 from django import forms
-from django.forms import HiddenInput
-from django.forms import NumberInput, TextInput
+from django.forms import HiddenInput, TextInput
 from django.db.models import Count
 from .models import *
-from django.http import HttpResponseRedirect
+from .services import CategoryInProductFormActions
+
+
+# from django.http import HttpResponseRedirect
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -219,98 +221,31 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                         map(lambda x: x.name, considences_list)))
 
 
-class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet):
+class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryInProductFormActions):
     # новая оптимизированнная версия проверки
     def clean(self):
         super().clean()
-
         self.instance.description = ''
-
-        def delete_attributes(category):
-            self.instance.description += 'Удалена категория %s <br>' % category
-
-            # if str(category.id) in self.instance.parameters_structure.keys():
-            #     self.product.parameters_structure.pop(str(category.id))
-            #
-            # for group in AttrGroup.objects.filter(related_categories__category=category.id).only('id'):
-            #     group_id = str(group.id)
-            #     for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
-            #         atr_id = str(atr.id)
-            #         if '%s-%s' % (group_id, atr_id) in self.product.parameters:
-            #             self.product.parameters.pop('%s-%s' % (group_id, atr_id))
-            
-        # def add_attributes(category):
-
-
-        def update_attributes(form_line):
-            # если категория добавлена
-            if form_line.initial == {}:
-                self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
-            # если категория изменена
-            elif 'category' in form_line.changed_data:
-                self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (
-                    Category.objects.get(id=form_line.initial['category']), form_line.cleaned_data['category'])
-            # если только изменен порядок следования категорий
-            else:
-                self.instance.description += "Изменен порядок категории %s на %s <br>" % (
-                    form_line.cleaned_data['category'], form_line.cleaned_data['position_category']
-                )
-
-
+        # условие ниже срабатывает при изменении формы категорий и при создании нового товара
         if self.has_changed():
-            if self.total_form_count() > 1:
-                list_of_query_groups = []
-                considences_list = set()
-                for form in self.forms:
-                    if self.can_delete and self._should_delete_form(form):
-                        continue
-                    groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
-                    list_of_query_groups.append(groups)
-                i = 0
-                for query_1_groups in list_of_query_groups:
-                    j = 0
-                    for query_2_groups in list_of_query_groups:
-                        if j == i:
-                            j += 1
-                            continue
-                        coincidences = query_1_groups.intersection(query_2_groups)
-                        if coincidences.exists():
-                            considences_list.update(coincidences)
-                        j += 1
-                    i += 1
-                if considences_list:
-                    raise ValidationError('Ошибка, в категориях дублируются группы атрибутов: "%s"' % mark_safe(
-                        ', '.join(map(lambda x: x.name, considences_list))))
-
-                # new_category_set = set(map(lambda x: x.cleaned_data['category'].id, self.forms))
-                new_category_set = set()
-
+            print("SELF HAS CHANGED")
+            total_form_count = self.total_form_count()
+            total_deleted_forms = len(self.deleted_forms)
+            # если неудаленных форм не одна тогда проверить весь сет на дубли групп атрибутов, обновить КК, обновить атрибуты,
+            # если одна то обнулить КК, обновить атрибуты
+            if (total_form_count - total_deleted_forms) > 1:
+                self.group_duplicate_check()
                 # цикл добавления id категорий для определения коллекции категорий после этого цикла.
                 # В этом же цикле добавление, изменение и удаление категорий в структуру и атрибуты товара
+                new_category_set = set()
                 for form in self.forms:
                     if self.can_delete and self._should_delete_form(form):
-                        delete_attributes(form.cleaned_data['category'])
+                        self.delete_attributes(category=form.cleaned_data['category'])
                         continue
                     elif form.has_changed():
-                        update_attributes(form)
+                        self.update_attributes(form)
                     new_category_set.add(form.cleaned_data['category'].id)
 
-                def add_category_collection(category_set):
-                    category_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
-                        cnt=len(new_category_set))
-                    for cat in new_category_set:
-                        category_collection = category_collection.filter(category_list=cat).values_list('id')
-                    if category_collection.exists():
-                        category_collection_id = category_collection[0][0]
-                        custom_order_group = map(lambda x: [x.category_id, x.group_id], CategoryCollection.objects.get(
-                            id=category_collection_id).rel_group_iocog.order_by('position'))
-                        self.instance.category_collection_id = category_collection_id
-                        self.instance.custom_order_group = list(custom_order_group)
-                    else:
-                        self.instance.category_collection_id = None
-                        self.instance.custom_order_group = []
-
-                add_category_collection(new_category_set)
                 if self.instance.id:
                     # change category collection when categeory changed
                     old_category_set = set(map(lambda x: x[0], ProductInCategory.objects.filter(
@@ -319,19 +254,19 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet):
                         # remove category collection from this product
                         self.instance.category_collection = None
                         self.instance.custom_order_group = []
-                        # self.instance.save()
                         # add category collection to this product
-                        add_category_collection(new_category_set)
-
+                        self.add_category_collection(new_category_set)
                 else:
-                    add_category_collection(new_category_set)
+                    self.add_category_collection(new_category_set)
             else:
+                self.instance.category_collection_id = None
+                self.instance.custom_order_group = []
                 for form in self.forms:
                     if self.can_delete and self._should_delete_form(form):
-                        delete_attributes(form.cleaned_data['category'])
+                        self.delete_attributes(category=form.cleaned_data['category'])
                         continue
                     elif form.has_changed():
-                        update_attributes(form)
+                        self.update_attributes(form)
 
 class AttrGroupForm(forms.ModelForm):
     class Meta:

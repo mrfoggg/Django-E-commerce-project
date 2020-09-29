@@ -118,3 +118,7 @@ dmypy.json
 
 media/
 *.ctb~*
+
+**/migrations/**
+!**/migrations
+!**/migrations/__init__.py

@@ -133,7 +133,7 @@ class Product(models.Model):
         # if self.category_collection_id is not None:
         if self.category_collection_id:
             return mark_safe("<a href={}>{}</a>".format(
-                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)), "подробнее"))
+                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)), self.category_collection))
         else:
             return "Не назначена"
 
