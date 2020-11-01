@@ -10,3 +10,4 @@ Pillow==7.1.2
 psycopg2==2.8.5
 PySnooper==0.4.1
 pytils==0.3
+django-nested-admin

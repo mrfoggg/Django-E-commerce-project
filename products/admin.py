@@ -1,17 +1,17 @@
 from unicodedata import category
 
 from django.contrib.postgres import fields
-from django_json_widget.widgets import JSONEditorWidget
+
 from mptt.admin import TreeRelatedFieldListFilter, DraggableMPTTAdmin
 import copy
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django_summernote.admin import SummernoteModelAdmin
-from grappelli.forms import GrappelliSortableHiddenMixin
+import nested_admin
 from .admin_form import *
 
 
-class ProductImageInline(GrappelliSortableHiddenMixin, admin.TabularInline):
+class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     fields = ['position', ('image_image', 'image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
     readonly_fields = ["image_image"]
     model = ProductImage
@@ -27,7 +27,7 @@ class BrandInLine(admin.TabularInline):
     extra = 0
 
 
-class CategoryForProductInLine(GrappelliSortableHiddenMixin, admin.TabularInline):
+class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     formset = CategoryForProductInLineFormSet
     fields = ('position_category', 'category', 'self_attribute_group')
     readonly_fields = ('self_attribute_group',)
@@ -37,17 +37,24 @@ class CategoryForProductInLine(GrappelliSortableHiddenMixin, admin.TabularInline
     extra = 0
 
 
-class ProductInCategoryInLine(admin.StackedInline):
+class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     # class ProductInCategoryInLine(GrappelliSortableHiddenMixin, admin.StackedInline):
-    fields = ('position_product', 'product',)
-    readonly_fields = ('product',)
+    fields = ('position_product', 'product', 'get_product_category_link')
+    readonly_fields = ('product', 'get_product_category_link')
     model = ProductInCategory
     sortable_field_name = "position_product"
     # classes = ['collapse']
     extra = 0
+    verbose_name_plural = 'Порядок товаров в категории'
+    verbose_name = 'Товар'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
-class AttrGroupInCategoryInline(admin.TabularInline):
+class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     # class AttrGroupInCategoryInline(GrappelliSortableHiddenMixin, admin.TabularInline):
     fields = (('position', 'group', 'self_attributes_links',),)
     readonly_fields = ('self_attributes_links',)
@@ -58,7 +65,7 @@ class AttrGroupInCategoryInline(admin.TabularInline):
     extra = 0
 
 
-class CategoriesInGroupInline(admin.TabularInline):
+class CategoriesInGroupInline(nested_admin.NestedTabularInline):
     fields = ('position', 'category',)
     model = AttrGroupInCategory
     formset = CategoriesInGroupInlineFormSet
@@ -68,7 +75,7 @@ class CategoriesInGroupInline(admin.TabularInline):
     verbose_name_plural = "Категории товаров содержащие текущую группу атрибутов"
 
 
-class AttributesInGroupInline(GrappelliSortableHiddenMixin, admin.TabularInline):
+class AttributesInGroupInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     fields = ('position', 'attribute', 'type_of_value', 'self_value_variants')
     readonly_fields = ('type_of_value', 'self_value_variants',)
     model = AttributesInGroup
@@ -78,8 +85,8 @@ class AttributesInGroupInline(GrappelliSortableHiddenMixin, admin.TabularInline)
     form = AttributeForm
 
 
-class ItemOfCustomOrderGroupInline(admin.TabularInline):
-    fields = ('position', 'category', 'group', 'getlink_group', 'self_attributes_links',)
+class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
+    fields = ('position', 'getlink_group', 'self_attributes_links',)
     readonly_fields = ('self_attributes_links', 'getlink_group',)
     model = ItemOfCustomOrderGroup
     formset = ItemOfCustomOrderGroupInLineFormSet
@@ -88,12 +95,15 @@ class ItemOfCustomOrderGroupInline(admin.TabularInline):
     ordering = ("position",)
     can_delete = False
 
+    def has_add_permission(self, request, obj=None):
+        return False
 
-class ShotParametersOfProductInline(GrappelliSortableHiddenMixin, admin.StackedInline):
+
+class ShotParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     fields = ('position', 'attribute', 'name', 'is_active')
     extra = 0
     model = ShotParametersOfProduct
-    ordering = ("position",)
+    sortable_field_name = "position"
 
     # classes = ['collapse']
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -102,11 +112,11 @@ class ShotParametersOfProductInline(GrappelliSortableHiddenMixin, admin.StackedI
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class MiniParametersOfProductInline(GrappelliSortableHiddenMixin, admin.StackedInline):
+class MiniParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     fields = ('position', 'attribute', 'name', 'is_active')
     extra = 0
     model = MiniParametersOfProduct
-    ordering = ("position",)
+    sortable_field_name = "position"
 
     # classes = ['collapse']
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -116,7 +126,7 @@ class MiniParametersOfProductInline(GrappelliSortableHiddenMixin, admin.StackedI
 
 
 @admin.register(Category)
-class CategoryModelAdmin(SummernoteModelAdmin, DraggableMPTTAdmin, ):
+class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, DraggableMPTTAdmin, ):
     fields = (
         ('name', 'parent'), ('slug', 'id', 'is_active'), ('image', 'image_view',), ('sign', 'sign_view'), 'description',
         ('created', 'updated'))
@@ -147,11 +157,8 @@ class CategoryModelAdmin(SummernoteModelAdmin, DraggableMPTTAdmin, ):
 
 
 @admin.register(Product)
-class ProductModelAdmin(SummernoteModelAdmin):
+class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     summernote_fields = ('description',)
-    # formfield_overrides = {
-    #     fields.JSONField: {'widget': JSONEditorWidget},
-    # }
     form = ProductForm
     list_display = ('art', 'name', 'rating', 'get_product_category_link', 'is_active')
     list_display_links = ('name',)
@@ -163,7 +170,7 @@ class ProductModelAdmin(SummernoteModelAdmin):
     inlines = (ProductImageInline, CategoryForProductInLine)
     change_form_template = "products/product_changeform.html"
     fieldsets = (
-        (None, {
+        ("Основное", {
             'fields': (
                 'get_category_collection_link', ('name', 'art',), ('slug', 'admin_category'),
                 ('brand', 'is_active',),
@@ -171,7 +178,7 @@ class ProductModelAdmin(SummernoteModelAdmin):
         }),
         ("Характеристики", {
             # 'classes': ('collapse',),
-            'fields': ('parameters', 'parameters_structure'),
+            'fields': ('parameters', 'mini_parameters_structure', 'shot_parameters_structure', 'parameters_structure'),
         }),
         ("Габбариты", {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box'))}),
         ("Разное", {
@@ -182,6 +189,7 @@ class ProductModelAdmin(SummernoteModelAdmin):
             'fields': ('description',)
         })
     )
+
 
     def response_change(self, request, obj):
         if "_save_copy" in request.POST:
@@ -217,7 +225,7 @@ class CountryAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttrGroup)
-class AttrGroupAdmin(admin.ModelAdmin):
+class AttrGroupAdmin(nested_admin.NestedModelAdmin):
     form = AttrGroupForm
     model = AttrGroup
     change_form_template = "products/group_attribute_changeform.html"
@@ -283,7 +291,7 @@ class AttributeValueAdmin(admin.ModelAdmin):
 
 
 @admin.register(CategoryCollection)
-class CategoryCollectionAdmin(admin.ModelAdmin):
+class CategoryCollectionAdmin(nested_admin.NestedModelAdmin):
     fields = ('id', 'category_list', ('is_active_custom_order_group', 'is_active_custom_order_shot_parameters',
                                       'is_active_custom_order_mini_parameters',),)
     readonly_fields = ('id',)

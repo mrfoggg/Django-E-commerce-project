@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.urls import path, re_path, include
 from django.conf import settings
 from django.conf.urls.static import static
-# from filebrowser.sites import site
 
 admin.site.site_header = 'Интернет магазин "Снип-Сноп"'
 admin.site.site_title = "Снип-Сноп"
@@ -11,12 +10,10 @@ admin.site.index_title = "Снип-Сноп администрирование"
 urlpatterns = [
     path('', include('home.urls')),
     path('products/', include('products.urls')),
-    # path('admin/filebrowser/', site.urls),
-    path('grappelli/', include('grappelli.urls')),
-    path('admin/', admin.site.urls),
+    path('_nested_admin/', include('nested_admin.urls')),
     path('summernote/', include('django_summernote.urls')),
-    # re_path(r'^nested_admin/', include('nested_admin.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('admin/', admin.site.urls),
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # if settings.DEBUG:
 #     import debug_toolbar

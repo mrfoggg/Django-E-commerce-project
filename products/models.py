@@ -98,7 +98,7 @@ class Product(models.Model):
     admin_category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.SET_NULL,
                                     verbose_name='Категория товаров админ-панели')
     category_collection = models.ForeignKey('CategoryCollection', blank=True, null=True, default=None,
-                                            on_delete=models.CASCADE, verbose_name='Коллекция категорий')
+                                            on_delete=models.SET_NULL, verbose_name='Коллекция категорий')
 
     parameters = models.JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
     parameters_structure = models.JSONField(default=dict, blank=True, verbose_name='Структура характеристик')
@@ -116,9 +116,11 @@ class Product(models.Model):
     mini_parameters_structure = models.JSONField(default=dict, blank=True,
                                                  verbose_name='Структура мини характеристик товара')
     shot_parameters_custom_structure = models.JSONField(default=dict, blank=True,
-                                                        verbose_name='Структура кратких характеристик товара для сочетания категорий')
+                                                        verbose_name='Структура кратких характеристик товара для '
+                                                                     'сочетания категорий')
     mini_parameters_custom_structure = models.JSONField(default=dict, blank=True,
-                                                        verbose_name='Структура мини характеристик товара для сочетания категорий')
+                                                        verbose_name='Структура мини характеристик товара для '
+                                                                     'сочетания категорий')
 
     lenght = models.FloatField(blank=True, null=True, verbose_name='Длина, см')
     width = models.FloatField(blank=True, null=True, verbose_name='Ширина, см')
@@ -245,12 +247,16 @@ class ProductInCategory(models.Model):
         category = Category.objects.filter(id=self.category_id).values_list('name')[0][0]
         return '"%s" - %s' % (category, name)
 
+    def get_product_category_link(self):
+        return self.product.get_product_category_link
+
+    get_product_category_link.short_description = 'Дополнительные категории'
+    get_product_category_link = property(get_product_category_link)
+
     def self_attribute_group(self):
         return self.category.self_attribute_group
 
-    self_attribute_group.short_description = '--------------------------------------------------------------------------' \
-                                             '---- Группы атрибутов------------------------------------------------------' \
-                                             '-----------------------------------------'
+    self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
     def clean(self):
@@ -341,9 +347,7 @@ class AttrGroup(models.Model):
             list.append(link_atr)
         return mark_safe(', '.join(list))
 
-    self_attributes_links.short_description = '------------------------------------------------------------------------- ' \
-                                              'Содержит атрибуты' \
-                                              '--------------------------------------------------------------------------AttributesInGroup'
+    self_attributes_links.short_description = 'Содержит атрибуты'
     self_attributes_links = property(self_attributes_links)
 
     class Meta:
@@ -392,9 +396,7 @@ class Attribute(models.Model):
             list.append(link_val)
         return mark_safe(', '.join(list))
 
-    self_value_variants.short_description = '--------------------------------------------------------------------------- ' \
-                                            'Список значений ' \
-                                            '-------------------------------------------------------------------'
+    self_value_variants.short_description = 'Список значений '
     self_value_variants = property(self_value_variants)
 
     def get_other_copy(self):
@@ -493,9 +495,7 @@ class AttrGroupInCategory(models.Model):
     def self_attributes_links(self):
         return self.group.self_attributes_links
 
-    self_attributes_links.short_description = '-------------------------------------------------------------------------' \
-                                              ' Содержит атрибуты' \
-                                              '-------------------------------------------------------------------------'
+    self_attributes_links.short_description = ' Содержит атрибуты'
     self_attributes_links = property(self_attributes_links)
 
     def get_self_atr_structure_list(self):
@@ -620,9 +620,7 @@ class AttributesInGroup(models.Model):
     def self_value_variants(self):
         return self.attribute.self_value_variants
 
-    self_value_variants.short_description = '--------------------------------------------------------------------------- ' \
-                                            'Список значений' \
-                                            '-----------------------------------------------------------------------------'
+    self_value_variants.short_description = 'Список значений'
     self_value_variants = property(self_value_variants)
 
     def type_of_value(self):
@@ -753,12 +751,12 @@ class ItemOfCustomOrderGroup(models.Model):
     def self_attributes_links(self):
         return self.group.self_attributes_links
 
-    self_attributes_links.short_description = '------------------------------------------------------Содержит атрибуты'
+    self_attributes_links.short_description = 'Содержит атрибуты'
 
     def getlink_group(self):
         return self.group.getlink
 
-    getlink_group.short_description = '--------------------------------Группа атрибутов---------------------------------'
+    getlink_group.short_description = 'Группа атрибутов'
 
     self_attributes_links = property(self_attributes_links)
 
@@ -784,6 +782,7 @@ class ShotParametersOfProduct(models.Model):
     class Meta:
         verbose_name = "Атрибут для отображения в блоке кратких характеристик товара"
         verbose_name_plural = "Блок кратких характеристик товара"
+        ordering = ('position',)
 
     def __str__(self):
         if self.name:
@@ -805,6 +804,7 @@ class MiniParametersOfProduct(models.Model):
     class Meta:
         verbose_name = "Атрибут для отображения в блоке мини характеристик товара"
         verbose_name_plural = "Блок мини характеристик товара"
+        ordering = ('position',)
 
     def __str__(self):
         if self.name:
