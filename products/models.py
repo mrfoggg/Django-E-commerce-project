@@ -239,7 +239,7 @@ class ProductInCategory(models.Model):
     class Meta:
         verbose_name = "Размещение товара в категории "
         verbose_name_plural = "Размещения товара в категории"
-        ordering = ('position_product',)
+        # ordering = ('position_product',)
         unique_together = ('product', 'category')
 
     def __str__(self):

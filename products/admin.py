@@ -27,7 +27,7 @@ class BrandInLine(admin.TabularInline):
     extra = 0
 
 
-class CategoryForProductInLine(nested_admin.NestedTabularInline):
+class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     formset = CategoryForProductInLineFormSet
     fields = ('position_category', 'category', 'self_attribute_group')
     readonly_fields = ('self_attribute_group',)
@@ -44,15 +44,17 @@ class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.Nes
     readonly_fields = ('product', 'get_product_category_link')
     model = ProductInCategory
     sortable_field_name = "position_product"
+    ordering = ('position_product',)
     # classes = ['collapse']
     extra = 0
     verbose_name_plural = 'Порядок товаров в категории'
     verbose_name = 'Товар'
+    can_delete = False
 
-    def has_add_permission(self, request, obj=None):
-        return False
-    def has_delete_permission(self, request, obj=None):
-        return False
+    # def has_add_permission(self, request, obj=None):
+    #     return False
+    # def has_delete_permission(self, request, obj=None):
+    #     return False
 
 
 class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -92,11 +94,12 @@ class ItemOfCustomOrderGroupInline(nested_admin.NestedTabularInline):
     model = ItemOfCustomOrderGroup
     formset = ItemOfCustomOrderGroupInLineFormSet
     sortable_field_name = "position"
+    ordering = ('position',)
     extra = 0
-    can_delete = False
+    # can_delete = False
 
-    def has_add_permission(self, request, obj=None):
-        return False
+    # def has_add_permission(self, request, obj=None):
+    #     return False
 
 
 class ShotParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -178,7 +181,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
         }),
         ("Характеристики", {
             # 'classes': ('collapse',),
-            'fields': ('parameters', 'mini_parameters_structure', 'shot_parameters_structure', 'parameters_structure'),
+            'fields': ('parameters', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure',),
         }),
         ("Габбариты", {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box'))}),
         ("Разное", {

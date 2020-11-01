@@ -68,16 +68,20 @@ class ProductAttributesField(forms.MultiValueField):
                     group_items_list.append(group_item)
                     group_id_list.append(group_id)
                     atr_id_set.update(sorted_list_of_attribute_id)
+                print(group_items_list)
 
             if mode == "standart":
                 print('mode == standart')
-                for category_id_str, category_value in parameters_structure.items():
-                    for group_id_str, group_value in category_value['groups_attributes'].items():
-                        attribute_items = group_value['attributes'].items()
+                category_list = map(lambda x: [x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']], parameters_structure.items())
+                for category in sorted(category_list):
+                    group_list = map(lambda y: [y[1]['group_position'], int(y[0]), y[1]['attributes']], category[2].items())
+                    # for group_id_str, group_value in category[2].items():
+                    for group in sorted(group_list):
+                        attribute_items = group[2].items()
                         sorted_list_of_attribute_id = Get_attribute_id(attribute_items)
-                        group_item = [int(category_id_str), int(group_id_str), sorted_list_of_attribute_id]
+                        group_item = [category[1], group[1], sorted_list_of_attribute_id]
                         group_items_list.append(group_item)
-                        group_id_list.append(int(group_id_str))
+                        group_id_list.append(group[1])
                         atr_id_set.update(sorted_list_of_attribute_id)
 
             categories_id_list = map(lambda x: int(x), parameters_structure.keys())
@@ -178,6 +182,7 @@ class ProductForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'parameters_structure': HiddenInput(),
+            # 'parameters_structure': JSONEditorWidget,
             'art': TextInput(attrs={'size':10}),
             'name': TextInput(attrs={'size':90}),
             'lenght': NumberInput(attrs={'size':5}),
@@ -188,6 +193,7 @@ class ProductForm(forms.ModelForm):
             'height_box': NumberInput(attrs={'size':5}),
             'weight': NumberInput(attrs={'size':5}),
             'mini_parameters_structure': JSONEditorWidget,
+            'shot_parameters_structure': JSONEditorWidget,
             'shot_parameters_structure': JSONEditorWidget,
         }
 
