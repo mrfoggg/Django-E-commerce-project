@@ -27,12 +27,13 @@ class BrandInLine(admin.TabularInline):
     extra = 0
 
 
-class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
+class CategoryForProductInLine(nested_admin.NestedTabularInline):
     formset = CategoryForProductInLineFormSet
     fields = ('position_category', 'category', 'self_attribute_group')
     readonly_fields = ('self_attribute_group',)
     model = ProductInCategory
-    sortable_field_name = "position_category"
+    sortable_field_name = 'position_category'
+    ordering = ('position_category',)
     # classes = ['collapse']
     extra = 0
 
@@ -85,14 +86,13 @@ class AttributesInGroupInline(nested_admin.SortableHiddenMixin, nested_admin.Nes
     form = AttributeForm
 
 
-class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
+class ItemOfCustomOrderGroupInline(nested_admin.NestedTabularInline):
     fields = ('position', 'getlink_group', 'self_attributes_links',)
     readonly_fields = ('self_attributes_links', 'getlink_group',)
     model = ItemOfCustomOrderGroup
     formset = ItemOfCustomOrderGroupInLineFormSet
     sortable_field_name = "position"
     extra = 0
-    ordering = ("position",)
     can_delete = False
 
     def has_add_permission(self, request, obj=None):

@@ -57,6 +57,7 @@ class ProductAttributesField(forms.MultiValueField):
                 return list(sorted_list_of_attribute_id)
 
             if mode == 'custom':
+                print('mode == custom')
                 for category_and_group in custom_order_group:
                     category_id = category_and_group[0]
                     group_id = category_and_group[1]
@@ -69,6 +70,7 @@ class ProductAttributesField(forms.MultiValueField):
                     atr_id_set.update(sorted_list_of_attribute_id)
 
             if mode == "standart":
+                print('mode == standart')
                 for category_id_str, category_value in parameters_structure.items():
                     for group_id_str, group_value in category_value['groups_attributes'].items():
                         attribute_items = group_value['attributes'].items()
