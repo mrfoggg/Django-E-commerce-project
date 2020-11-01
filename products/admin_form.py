@@ -1,10 +1,10 @@
 import itertools
 from django import forms
-from django.forms import HiddenInput, TextInput
+from django.forms import HiddenInput, TextInput, NumberInput
 from django.db.models import Count
 from .models import *
 from .services import CategoryInProductFormActions
-
+from django_json_widget.widgets import JSONEditorWidget
 
 # from django.http import HttpResponseRedirect
 
@@ -176,19 +176,22 @@ class ProductForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'parameters_structure': HiddenInput(),
-            # 'art': TextInput(attrs={'size':10}),
-            # 'name': TextInput(attrs={'size':900}),
-            # 'lenght': NumberInput(attrs={'size':5}),
-            # 'width': NumberInput(attrs={'size':5}),
-            # 'height': NumberInput(attrs={'size':5}),
-            # 'lenght_box': NumberInput(attrs={'size':5}),
-            # 'width_box': NumberInput(attrs={'size':5}),
-            # 'height_box': NumberInput(attrs={'size':5}),
-            # 'weight': NumberInput(attrs={'size':5}),
+            'art': TextInput(attrs={'size':10}),
+            'name': TextInput(attrs={'size':90}),
+            'lenght': NumberInput(attrs={'size':5}),
+            'width': NumberInput(attrs={'size':5}),
+            'height': NumberInput(attrs={'size':5}),
+            'lenght_box': NumberInput(attrs={'size':5}),
+            'width_box': NumberInput(attrs={'size':5}),
+            'height_box': NumberInput(attrs={'size':5}),
+            'weight': NumberInput(attrs={'size':5}),
+            'mini_parameters_structure': JSONEditorWidget,
+            'shot_parameters_structure': JSONEditorWidget,
         }
 
 
 class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
+    # хз нужно ли при переходе с грапелли на чистую админку
     def add_fields(self, form, index):
         super(CategoriesInGroupInlineFormSet, self).add_fields(form, index)
         form.fields['position'] = forms.IntegerField(widget=HiddenInput(), initial=0)
@@ -273,7 +276,7 @@ class AttrGroupForm(forms.ModelForm):
         model = AttrGroup
         fields = ('name',)
         widgets = {
-            # 'name': TextInput(attrs={'size':50}),
+            'name': TextInput(attrs={'size':50}),
         }
 
 
@@ -282,7 +285,7 @@ class AttributeForm(forms.ModelForm):
         model = AttrGroup
         fields = ('name',)
         widgets = {
-            # 'name': TextInput(attrs={'size':500}),
+            'name': TextInput(attrs={'size':50}),
         }
 
 
@@ -333,12 +336,13 @@ class CategoryCollectionForm(forms.ModelForm):
 
 
 class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
+
     def clean(self):
         super().clean()
         custom_order_list = []
         for form in self.forms:
-            custom_order_item = [form.cleaned_data['position'], form.cleaned_data['category'].id,
-                                 form.cleaned_data['group'].id]
+            custom_order_item = [form.cleaned_data['position'], form.cleaned_data['id'].category_id,
+                                 form.cleaned_data['id'].group_id]
             custom_order_list.append(custom_order_item)
         custom_order_list.sort()
         group_list = list(map(lambda x: x[1:], custom_order_list))
@@ -346,3 +350,4 @@ class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
             Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
         else:
             Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
+

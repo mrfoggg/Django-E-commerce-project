@@ -10,18 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-# import os
 from pathlib import Path
-# import django
-
-# # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
-MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_URL = '/media/'
 
 
 # Quick-start development settings - unsuitable for production
@@ -35,13 +27,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
-    # # 'grappelli.dashboard',
-    'grappelli',
-    # # 'filebrowser',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,6 +39,9 @@ INSTALLED_APPS = [
     'django.forms',
     'django_summernote',
     'mptt',
+    'nested_admin',
+# Простые инструменты для обработки строк на русском языке (выберите правильную форму для множественного числа,
+    # словесное представление чисел, дат на русском языке без локали, транслитерации и т. д.)
     'pytils',
     'django_json_widget' ,
     'pysnooper',
@@ -72,7 +63,6 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'ecommersDjango3.urls'
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
-# TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 TEMPLATE_DIR = BASE_DIR / "templates"
 
 TEMPLATES = [
@@ -99,8 +89,6 @@ WSGI_APPLICATION = 'ecommersDjango3.wsgi.application'
 
 DATABASES = {
     'default': {
-        # 'ENGINE': 'django.db.backends.sqlite3',
-        # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'django_db',
         'USER': 'snipadmin',
@@ -147,27 +135,23 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STATIC_URL = '/static/'
+
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
+    BASE_DIR / 'static',
 ]
+
+
 INTERNAL_IPS = [
     # ...
     '127.0.0.1',
     # ...
 ]
-GRAPPELLI_CLEAN_INPUT_TYPES = False
-
-GRAPPELLI_INDEX_DASHBOARD = 'snipsnop.dashboard.CustomIndexDashboard'
-# GRAPPELLI_INDEX_DASHBOARD = {  # alternative method
-#     'products.admin.admin_site': 'products.my_dashboard.CustomIndexDashboard',
-# }
-
-# DIRECTORY = getattr(settings, "FILEBROWSER_DIRECTORY", 'uploads/')
-
-STATICFILES_FINDERS = (
-'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-'django.contrib.staticfiles.finders.FileSystemFinder',
-)
-
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+ALLOWED_HOSTS = ['*']
