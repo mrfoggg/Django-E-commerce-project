@@ -89,8 +89,8 @@ class AttributesInGroupInline(nested_admin.SortableHiddenMixin, nested_admin.Nes
 
 
 class ItemOfCustomOrderGroupInline(nested_admin.NestedTabularInline):
-    fields = ('position', 'getlink_group', 'self_attributes_links',)
-    readonly_fields = ('self_attributes_links', 'getlink_group',)
+    fields = ('position', 'category', 'getlink_group', 'self_attributes_links',)
+    readonly_fields = ('category', 'self_attributes_links', 'getlink_group',)
     model = ItemOfCustomOrderGroup
     formset = ItemOfCustomOrderGroupInLineFormSet
     sortable_field_name = "position"

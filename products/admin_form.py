@@ -57,7 +57,6 @@ class ProductAttributesField(forms.MultiValueField):
                 return list(sorted_list_of_attribute_id)
 
             if mode == 'custom':
-                print('mode == custom')
                 for category_and_group in custom_order_group:
                     category_id = category_and_group[0]
                     group_id = category_and_group[1]
@@ -71,11 +70,9 @@ class ProductAttributesField(forms.MultiValueField):
                 print(group_items_list)
 
             if mode == "standart":
-                print('mode == standart')
                 category_list = map(lambda x: [x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']], parameters_structure.items())
                 for category in sorted(category_list):
                     group_list = map(lambda y: [y[1]['group_position'], int(y[0]), y[1]['attributes']], category[2].items())
-                    # for group_id_str, group_value in category[2].items():
                     for group in sorted(group_list):
                         attribute_items = group[2].items()
                         sorted_list_of_attribute_id = Get_attribute_id(attribute_items)
@@ -93,7 +90,9 @@ class ProductAttributesField(forms.MultiValueField):
             group_names_dict = {}
             group_data_list = AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name')
             for id_and_name in group_data_list:
-                group_names_dict[id_and_name[0]] = id_and_name[1]
+                name = id_and_name[1]
+                link = reverse('admin:products_attrgroup_change', args=(id_and_name[0],))
+                group_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
 
             atr_id_list = list(atr_id_set)
             attribute_parameters_dict = {}
