@@ -131,13 +131,14 @@ class Product(models.Model):
     weight = models.FloatField(blank=True, null=True, verbose_name='Вес, кг')
     warranty = models.SmallIntegerField(choices=WARRANTY, default=1, verbose_name='Срок гарантии')
     url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
-                            verbose_name='Ссылка на товар на сайте производителя)')
+                          verbose_name='Ссылка на товар на сайте производителя)')
 
     def get_category_collection_link(self):
         # if self.category_collection_id is not None:
         if self.category_collection_id:
             return mark_safe("<a href={}>{}</a>".format(
-                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)), self.category_collection))
+                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)),
+                self.category_collection))
         else:
             return "Не назначена"
 
@@ -160,12 +161,23 @@ class Product(models.Model):
 
     get_link_refresh = property(get_link_refresh)
 
-    def get_mini_atrinutes(self):
-        sorted_mini_atributes = sorted(self.mini_parameters_structure.items())
-        # return mark_safe('<br>'.join(list(sorted_mini_atributes)))
-        return sorted_mini_atributes
+    def get_mini_parameters(self):
+        # print(self.parameters)
+        # x[0] - это id категории, x[1] - ее содержимое
 
-    get_mini_atrinutes = property(get_mini_atrinutes)
+        mini_parameters_srt = sorted(list(map(lambda x: [x[1]['cat_position'],
+                                                             sorted(list(map(lambda y: [y[1]['pos_atr'], y[1]['name']],
+                                                                             x[1]['mini_attributes'].items())))],
+                                                  self.mini_parameters_structure.items())))
+        mini_parameters_display = map(lambda x: list(map(lambda y: y[1], x[1])), mini_parameters_srt)
+        return list(mini_parameters_display)
+
+    [[0, [[1, None], [2, None]]]]
+    [[0, [[1, None], [2, None]]], [1, [[0, None], [1, None]]]]
+    [[[1, None], [2, None]], [[0, None], [1, None]]]
+    [[[0, 'Всякий атрибут1'], [1, 'Тип нагревателя']], [[0, None], [1, None]]]
+
+    get_mini_parameters = property(get_mini_parameters)
 
     class Meta:
         ordering = ['name']
@@ -175,10 +187,13 @@ class Product(models.Model):
     def __str__(self):
         return "%s" % self.name
 
-    # def save(self, *args, **kwargs):
-    #     if not self.slug:
-    #         self.slug = get_unique_slug(self, 'name', 'slug')
-    #     super().save(*args, **kwargs)
+
+# [[0, [[0, '1-1', 'ск. ииц'], [1, '2-2', 'материал']]]]
+# [[[0, '1-1', 'ск. ииц'], [1, '2-2', 'материал']]]
+# def save(self, *args, **kwargs):
+#     if not self.slug:
+#         self.slug = get_unique_slug(self, 'name', 'slug')
+#     super().save(*args, **kwargs)
 
 
 class ProductImage(models.Model):
@@ -491,7 +506,7 @@ class AttrGroupInCategory(models.Model):
             raise ValidationError(
                 "Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для некоторых товаров:" %
                 (self.group, self.category)
-                )
+            )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -821,6 +836,7 @@ class MiniParametersOfProduct(models.Model):
         else:
             return ' - "%s"' % self.attribute.attribute.name
 
+
 class SomeSites(models.Model):
     ROLE = (
         (1, " Покупатель "),
@@ -831,7 +847,7 @@ class SomeSites(models.Model):
     role = models.SmallIntegerField(choices=ROLE)
     info = models.CharField(max_length=128, blank=True, default=None, verbose_name='Краткое описание')
     url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
-                            verbose_name='Ссылка на сайт)')
+                          verbose_name='Ссылка на сайт)')
 
     def __str__(self):
         return "%s (%s)" % (self.name, self.get_role_display())
@@ -840,18 +856,20 @@ class SomeSites(models.Model):
         verbose_name = "Сторонний сайт"
         verbose_name_plural = "Сторонние сайты"
 
+
 class PricesOtherShop(models.Model):
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     product = models.ForeignKey('Product', blank=True, null=True, default=None, on_delete=models.CASCADE,
                                 verbose_name='Товар')
     shop = models.ForeignKey('SomeSites', blank=True, null=True, default=None, on_delete=models.CASCADE,
-                                verbose_name='Магазин')
+                             verbose_name='Магазин')
     price = models.DecimalField(max_digits=8, decimal_places=2)
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
     url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
-                            verbose_name='Ссылка на товар)')
+                          verbose_name='Ссылка на товар)')
     info = models.CharField(max_length=128, blank=True, null=True, default=None,
                             verbose_name='Краткое описание)')
+
     def __str__(self):
         return "цена магазина %s" % self.shop.name
 

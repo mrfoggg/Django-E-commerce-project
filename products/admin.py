@@ -176,7 +176,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     list_editable = ('rating', 'is_active',)
     model = Product
     prepopulated_fields = {"slug": ("name",)}
-    readonly_fields = ('created', 'updated', 'category_collection', 'get_category_collection_link', 'get_mini_atrinutes')
+    readonly_fields = ('created', 'updated', 'category_collection', 'get_category_collection_link', 'get_mini_parameters' )
     list_filter = (('admin_category', TreeRelatedFieldListFilter),)
     inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
     change_form_template = "products/product_changeform.html"
@@ -201,7 +201,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
 
         ("Характеристики", {
             # 'classes': ('collapse',),
-            'fields': ('parameters', 'get_mini_atrinutes', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
+            'fields': ('parameters', 'get_mini_parameters', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
             'classes': ('order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage', 'baton-tab-inline-pricesothershop', ),
         }),
 
