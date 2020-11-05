@@ -130,6 +130,8 @@ class Product(models.Model):
     height_box = models.FloatField(blank=True, null=True, verbose_name='Высота упаковки, см')
     weight = models.FloatField(blank=True, null=True, verbose_name='Вес, кг')
     warranty = models.SmallIntegerField(choices=WARRANTY, default=1, verbose_name='Срок гарантии')
+    url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
+                            verbose_name='Ссылка на товар на сайте производителя)')
 
     def get_category_collection_link(self):
         # if self.category_collection_id is not None:
@@ -157,6 +159,13 @@ class Product(models.Model):
         return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
 
     get_link_refresh = property(get_link_refresh)
+
+    def get_mini_atrinutes(self):
+        sorted_mini_atributes = sorted(self.mini_parameters_structure.items())
+        # return mark_safe('<br>'.join(list(sorted_mini_atributes)))
+        return sorted_mini_atributes
+
+    get_mini_atrinutes = property(get_mini_atrinutes)
 
     class Meta:
         ordering = ['name']
@@ -811,3 +820,41 @@ class MiniParametersOfProduct(models.Model):
             return ' - "%s"' % self.name
         else:
             return ' - "%s"' % self.attribute.attribute.name
+
+class SomeSites(models.Model):
+    ROLE = (
+        (1, " Покупатель "),
+        (2, " Поставщик "),
+        (3, " Конкурент "),
+    )
+    name = models.CharField(max_length=128, default=None, unique=True, verbose_name='Название магазина')
+    role = models.SmallIntegerField(choices=ROLE)
+    info = models.CharField(max_length=128, blank=True, default=None, verbose_name='Краткое описание')
+    url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
+                            verbose_name='Ссылка на сайт)')
+
+    def __str__(self):
+        return "%s (%s)" % (self.name, self.get_role_display())
+
+    class Meta:
+        verbose_name = "Сторонний сайт"
+        verbose_name_plural = "Сторонние сайты"
+
+class PricesOtherShop(models.Model):
+    created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
+    product = models.ForeignKey('Product', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                                verbose_name='Товар')
+    shop = models.ForeignKey('SomeSites', blank=True, null=True, default=None, on_delete=models.CASCADE,
+                                verbose_name='Магазин')
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
+    url = models.URLField(max_length=128, blank=True, null=True, default=None, unique=True,
+                            verbose_name='Ссылка на товар)')
+    info = models.CharField(max_length=128, blank=True, null=True, default=None,
+                            verbose_name='Краткое описание)')
+    def __str__(self):
+        return "цена магазина %s" % self.shop.name
+
+    class Meta:
+        verbose_name = "Цена конкурента"
+        verbose_name_plural = "Цены конкурентов"

@@ -180,13 +180,13 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = '__all__'
         widgets = {
-            'parameters_structure': HiddenInput(),
+            'parameters_structure': JSONEditorWidget(),
             # 'parameters_structure': JSONEditorWidget,
             'art': TextInput(attrs={'size':10}),
-            'name': TextInput(attrs={'size':90}),
-            'lenght': NumberInput(attrs={'size':5}),
+            'name': TextInput(attrs={'size':50}),
+            'lenght': NumberInput(attrs={'size':2}),
             'width': NumberInput(attrs={'size':5}),
-            'height': NumberInput(attrs={'size':5}),
+            'height': NumberInput(attrs={'size':3}),
             'lenght_box': NumberInput(attrs={'size':5}),
             'width_box': NumberInput(attrs={'size':5}),
             'height_box': NumberInput(attrs={'size':5}),

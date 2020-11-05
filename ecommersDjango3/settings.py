@@ -30,6 +30,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'baton',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,7 +48,8 @@ INSTALLED_APPS = [
     'pysnooper',
     # 'debug_toolbar',
     'home',
-    'products'
+    'products',
+    'baton.autodiscover',
 ]
 
 MIDDLEWARE = [

@@ -1,6 +1,7 @@
 {% for subwidget in widget.subwidgets %}
     {% ifequal subwidget.attrs.group_begin 'yes' %}
         <h4>Группа атрибутов "{{subwidget.attrs.group_name}}" категории товаров "{{subwidget.attrs.category_name}}" </h4>
+        <br />
         <table id = "multiwidget">
     {%endifequal%}
 	<tr>
@@ -9,6 +10,7 @@
 	</tr>
     {% ifequal subwidget.attrs.group_end 'yes' %}
         </table>
+        <br />
         <br />
     {%endifequal%}
 {% endfor %}

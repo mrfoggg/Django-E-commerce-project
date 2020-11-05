@@ -12,7 +12,8 @@ from .admin_form import *
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    fields = ['position', ('image_image', 'image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
+    # fields = ['position', ('image_image', 'image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
+    fields = ['position', ('image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
     readonly_fields = ["image_image"]
     model = ProductImage
     sortable_field_name = "position"
@@ -127,6 +128,13 @@ class MiniParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_adm
             kwargs["queryset"] = AttributesInGroup.objects.filter(group__in=request._obj_)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+class PricesOtherShopInline(nested_admin.NestedTabularInline):
+    model = PricesOtherShop
+    fielfs = ('created', 'shop', 'price', 'updated', 'url', 'info')
+    readonly_fields = ('created', 'updated',)
+    extra = 0
+    # sortable_field_name = "updated"
+
 
 @admin.register(Category)
 class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, DraggableMPTTAdmin, ):
@@ -168,29 +176,35 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     list_editable = ('rating', 'is_active',)
     model = Product
     prepopulated_fields = {"slug": ("name",)}
-    readonly_fields = ('created', 'updated', 'category_collection', 'get_category_collection_link',)
+    readonly_fields = ('created', 'updated', 'category_collection', 'get_category_collection_link', 'get_mini_atrinutes')
     list_filter = (('admin_category', TreeRelatedFieldListFilter),)
-    inlines = (ProductImageInline, CategoryForProductInLine)
+    inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
     change_form_template = "products/product_changeform.html"
     fieldsets = (
         ("Основное", {
             'fields': (
-                'get_category_collection_link', ('name', 'art',), ('slug', 'admin_category'),
+                ('name', 'art',), ('slug', 'admin_category'),
                 ('brand', 'is_active',),
-                ('created', 'updated',), 'is_active_custom_order_group')
+                ('created', 'updated',), ),
+            'classes': ('tab-fs-none',),
         }),
-        ("Характеристики", {
-            # 'classes': ('collapse',),
-            'fields': ('parameters', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure',),
+
+        ("Габбариты и вес", 
+            {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box', 'weight')),
+            'classes': ('tab-fs-none',),
         }),
-        ("Габбариты", {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box'))}),
+
         ("Разное", {
-            'fields': (('weight', 'warranty',),),
+            'fields': (('warranty','url', ),),
             # 'classes': ('wide,')
         }),
-        (None, {
-            'fields': ('description',)
-        })
+
+        ("Характеристики", {
+            # 'classes': ('collapse',),
+            'fields': ('parameters', 'get_mini_atrinutes', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
+            'classes': ('order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage', 'baton-tab-inline-pricesothershop', ),
+        }),
+
     )
 
 
@@ -201,6 +215,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
             product_copy.id = None
             product_copy.slug = None
             product_copy.art = None
+            product_copy.url = None
 
             copies = [0]
             for prod in Product.objects.filter(name__startswith=obj.name + ' (@копия #'):
@@ -301,6 +316,10 @@ class CategoryCollectionAdmin(nested_admin.NestedModelAdmin):
     model = CategoryCollection
     form = CategoryCollectionForm
     inlines = (ItemOfCustomOrderGroupInline,)
+
+@admin.register(SomeSites)
+class SomeSitesAdmin(nested_admin.NestedModelAdmin):
+    model = SomeSites
 
 
 admin.site.register(ProductImage)

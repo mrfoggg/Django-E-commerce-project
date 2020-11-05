@@ -2,7 +2,7 @@
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from django.db.models import Count
-from .models import Category, AttrGroup, CategoryCollection
+from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup
 
 
 class CategoryInProductFormActions:
@@ -55,8 +55,17 @@ class CategoryInProductFormActions:
     def update_attributes(self, form_line):
         print("RUN UPDATE ATR")
         # если категория добавлена
+        # отладочный фрагмент
         if form_line.initial == {}:
             self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
+        # добаввление мини-характеристик
+            mini_attributes = form_line.cleaned_data['category'].related_mini_attributes.all()
+            if mini_attributes.exists():
+                category = form_line.cleaned_data['category']
+                category_id = str(category.id)
+                mini_attributes = list(map(lambda x:[x[0], '%s-%s' % (AttributesInGroup.objects.get(id=x[1]).group_id, AttributesInGroup.objects.get(id=x[1]).attribute_id), x[2]], mini_attributes.values_list('position', 'attribute', 'name')))
+                self.instance.mini_parameters_structure[category_id] = {'cat_position': form_line.cleaned_data['position_category'], 'mini_attributes': mini_attributes}
+                # list(map(lambda x: list(x), mini_attributes))
         # если категория изменена
         elif 'category' in form_line.changed_data:
             self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (
