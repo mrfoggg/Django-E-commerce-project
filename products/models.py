@@ -161,23 +161,38 @@ class Product(models.Model):
 
     get_link_refresh = property(get_link_refresh)
 
-    def get_mini_parameters(self):
-        # print(self.parameters)
-        # x[0] - это id категории, x[1] - ее содержимое
+    def get_shot_parameters(self):
+        # # x[0] - это id категории, x[1] - ее содержимое
+        #
+        parameters_srt = sorted(list(map(lambda x: [x[1]['cat_position'],
+                                                         sorted(list(map(lambda y: [y[1]['pos_atr'],
+                                                                                    Attribute.objects.get(pk=y[1]['id']) if (y[1]['name'] is None) else y[1]['name'],
+                                                                                    y[1]['full_id'],
+                                                                                    y[1]['id']
+                                                                                    ],
+                                                                         x[1]['shot_attributes'].items())
+                                                                     ))],
+                                              self.shot_parameters_structure.items())))
+        parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1],
+                                                                                       'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and self.parameters[y[2]] in [None, ''])
+                                                                                       else list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(self.parameters[y[2]])] if (Attribute.objects.get(pk=y[3]).type_of_value==5)
+                                                                                       else [list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(i)][0] for i in self.parameters[y[2]]] if (Attribute.objects.get(pk=y[3]).type_of_value==6)
+                                                                                       else self.parameters[y[2]]), x[1]
+                                                                ))), parameters_srt)
 
-        mini_parameters_srt = sorted(list(map(lambda x: [x[1]['cat_position'],
-                                                             sorted(list(map(lambda y: [y[1]['pos_atr'], y[1]['name']],
-                                                                             x[1]['mini_attributes'].items())))],
-                                                  self.mini_parameters_structure.items())))
-        mini_parameters_display = map(lambda x: list(map(lambda y: y[1], x[1])), mini_parameters_srt)
-        return list(mini_parameters_display)
+        return mark_safe('<br>'.join(list(parameters_display)))
+        # return 'pass'
 
-    [[0, [[1, None], [2, None]]]]
-    [[0, [[1, None], [2, None]]], [1, [[0, None], [1, None]]]]
-    [[[1, None], [2, None]], [[0, None], [1, None]]]
-    [[[0, 'Всякий атрибут1'], [1, 'Тип нагревателя']], [[0, None], [1, None]]]
+    # {"2": {"cat_position": 0, "mini_attributes": {"1": {"name": "Тип нагревателя", "full_id": "1-1", "pos_atr": 1},
+    #                                               "7": {"name": "Всякий атрибут1", "full_id": "5-7", "pos_atr": 0}}},
+    #  "5": {"cat_position": 1, "mini_attributes": {"3": {"name": null, "full_id": "3-3", "pos_atr": 0},
+    #                                               "4": {"name": null, "full_id": "3-4", "pos_atr": 1}}}}
+    # [[0, [[1, None], [2, None]]]]
+    # [[0, [[1, None], [2, None]]], [1, [[0, None], [1, None]]]]
+    # [[[1, None], [2, None]], [[0, None], [1, None]]]
+    # [[[0, 'Всякий атрибут1'], [1, 'Тип нагревателя']], [[0, None], [1, None]]]
 
-    get_mini_parameters = property(get_mini_parameters)
+    get_shot_parameters = property(get_shot_parameters)
 
     class Meta:
         ordering = ['name']
