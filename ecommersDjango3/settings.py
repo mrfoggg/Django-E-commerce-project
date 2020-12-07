@@ -157,3 +157,61 @@ INTERNAL_IPS = [
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 ALLOWED_HOSTS = ['*']
+
+BATON = {
+    'SITE_HEADER': 'Baton',
+    'SITE_TITLE': 'Baton',
+    'INDEX_TITLE': 'Site administration',
+    'SUPPORT_HREF': 'https://github.com/otto-torino/django-baton/issues',
+    'COPYRIGHT': 'copyright © 2017 <a href="https://www.otto.to.it">Otto srl</a>', # noqa
+    'POWERED_BY': '<a href="https://www.otto.to.it">Otto srl</a>',
+    'CONFIRM_UNSAVED_CHANGES': True,
+    'SHOW_MULTIPART_UPLOADING': True,
+    'ENABLE_IMAGES_PREVIEW': True,
+    'CHANGELIST_FILTERS_IN_MODAL': True,
+    'CHANGELIST_FILTERS_ALWAYS_OPEN': False,
+    'MENU_ALWAYS_COLLAPSED': False,
+    'MENU_TITLE': 'Menu',
+    'GRAVATAR_DEFAULT_IMG': 'retro',
+    'MENU': (
+        { 'type': 'title', 'label': 'Пользователи', 'apps': ('auth', ) },
+        {
+            'type': 'app',
+            'name': 'auth',
+            'label': 'Учетные записи админки',
+            'icon': 'fa fa-lock',
+            'models': (
+                {
+                    'name': 'user',
+                    'label': 'Пользователи'
+                },
+                {
+                    'name': 'group',
+                    'label': 'Группы пользователей'
+                },
+            )
+        },
+        { 'type': 'title', 'label': 'Товары', 'apps': ('products', ) },
+        { 'type': 'free', 'label': 'Каталог', 'default_open': True, 'children': [
+            {'type': 'model', 'label': 'Список товаров', 'name': 'product', 'app': 'products'},
+            {'type': 'model', 'label': 'Категории товаров', 'name': 'category', 'app': 'products'},
+            {'type': 'model', 'label': 'Сочетания категорий', 'name': 'categorycollection', 'app': 'products'},
+            {'type': 'model', 'label': 'Бренды', 'name': 'brand', 'app': 'products'},
+            {'type': 'model', 'label': 'Страны', 'name': 'country', 'app': 'products'},
+            {'type': 'model', 'label': 'Фото товаров', 'name': 'productimage', 'app': 'products'},
+        ] },
+        { 'type': 'free', 'label': 'Характеристики', 'default_open': True, 'children': [
+            {'type': 'model', 'label': 'Группы атрибутов', 'name': 'attrgroup', 'app': 'products'},
+            {'type': 'model', 'label': 'Атрибуты', 'name': 'attribute', 'app': 'products'},
+            {'type': 'model', 'label': 'Значения атрибутов', 'name': 'attributevalue', 'app': 'products'},
+        ] },
+        { 'type': 'free', 'label': 'Custom Link', 'url': 'http://www.google.it', 'perms': ('flatpages.add_flatpage', 'auth.change_user') },
+        { 'type': 'free', 'label': 'My parent voice', 'default_open': True, 'children': [
+            { 'type': 'free', 'label': 'Another custom link', 'url': 'http://www.google.it' },
+        ] },
+    ),
+    # 'ANALYTICS': {
+    #     'CREDENTIALS': os.path.join(BASE_DIR, 'credentials.json'),
+    #     'VIEW_ID': '12345678',
+    # }
+}
