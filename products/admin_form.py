@@ -22,8 +22,6 @@ class ProductAttributesWidget(forms.MultiWidget):
         if value:
             for v in self.keys:
                 val.append(value[v])
-            print(value)
-            print(val)
             return val
         else:
             for v in self.keys:
@@ -187,7 +185,6 @@ class ProductForm(forms.ModelForm):
         self.fields['parameters'] = ProductAttributesField(instance=self.instance)
 
     def clean(self):
-        print(self.changed_data)
         cleaned_data = super().clean()
         if cleaned_data["parameters_structure"] != self.instance.parameters_structure:
             err = mark_safe('Структура характеристик была изменена: ' + self.instance.get_link_refresh)

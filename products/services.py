@@ -58,27 +58,30 @@ class CategoryInProductFormActions:
         # отладочный фрагмент
         if form_line.initial == {}:
             self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
-        # добаввление мини-характеристик
-            mini_attributes = form_line.cleaned_data['category'].related_mini_attributes.all()
+
+            category = form_line.cleaned_data['category']
+            # добаввление мини-характеристик
+            mini_attributes = category.related_mini_attributes.all()
             if mini_attributes.exists():
-                category = form_line.cleaned_data['category']
-                category_id = str(category.id)
-                attributes = dict(list(map(lambda x:
-                                           (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                           dict(pos_atr=x[0], full_id='%s-%s' % (AttributesInGroup.objects.get(id=x[1]).group_id, AttributesInGroup.objects.get(id=x[1]).attribute_id), name=x[2])),
-                                           mini_attributes.values_list('position', 'attribute', 'name'))))
-                self.instance.mini_parameters_structure[category_id] = {'cat_position': form_line.cleaned_data['position_category'], 'mini_attributes': attributes}
-        # добаввление кратких-характеристик
-            shot_attributes = form_line.cleaned_data['category'].related_shot_attributes.all()
+                pass
+
+# добаввление кратких-характеристик
+            shot_attributes = category.related_shot_attributes.all()
             if shot_attributes.exists():
-                category = form_line.cleaned_data['category']
                 category_id = str(category.id)
                 attributes = dict(list(map(lambda x:
                                            (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                           dict(pos_atr=x[0], full_id='%s-%s' % (AttributesInGroup.objects.get(id=x[1]).group_id, AttributesInGroup.objects.get(id=x[1]).attribute_id), name=x[2], id =x[3])),
-                                           shot_attributes.values_list('position', 'attribute', 'name', 'attribute_id'))))
-                self.instance.shot_parameters_structure[category_id] = {'cat_position': form_line.cleaned_data['position_category'], 'shot_attributes': attributes}
-                # list(map(lambda x: list(x), mini_attributes))
+                                            dict(pos_atr=x[0],
+                                                 full_id='%s-%s' % (
+                                                    AttributesInGroup.objects.get(id=x[1]).group_id,
+                                                    AttributesInGroup.objects.get(id=x[1]).attribute_id),
+                                                 name=x[2],
+                                                 id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
+                                           shot_attributes.values_list('position', 'attribute', 'name', ))))
+
+                self.instance.shot_parameters_structure[category_id] = {
+                    'cat_position': form_line.cleaned_data['position_category'], 'shot_attributes': attributes}
+
         # если категория изменена
         elif 'category' in form_line.changed_data:
             self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (

@@ -163,35 +163,32 @@ class Product(models.Model):
 
     def get_shot_parameters(self):
         # # x[0] - это id категории, x[1] - ее содержимое
-        #
+        # упорядоченый по порядковому номеру категорий список:
+        # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
         parameters_srt = sorted(list(map(lambda x: [x[1]['cat_position'],
-                                                         sorted(list(map(lambda y: [y[1]['pos_atr'],
-                                                                                    Attribute.objects.get(pk=y[1]['id']) if (y[1]['name'] is None) else y[1]['name'],
-                                                                                    y[1]['full_id'],
-                                                                                    y[1]['id']
-                                                                                    ],
-                                                                         x[1]['shot_attributes'].items())
-                                                                     ))],
-                                              self.shot_parameters_structure.items())))
+                                                    sorted(list(map(lambda y: [y[1]['pos_atr'],
+                                                                               Attribute.objects.get(pk=y[1]['id']).name if (y[1]['name'] is None) else y[1]['name'],
+                                                                               y[1]['full_id'],
+                                                                               y[1]['id']
+                                                                               ],
+                                                                    x[1]['shot_attributes'].items())
+                                                                ))],
+                                         self.shot_parameters_structure.items())))
+        # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
         parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1],
-                                                                                       'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and self.parameters[y[2]] in [None, ''])
-                                                                                       else list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(self.parameters[y[2]])] if (Attribute.objects.get(pk=y[3]).type_of_value==5)
-                                                                                       else [list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(i)][0] for i in self.parameters[y[2]]] if (Attribute.objects.get(pk=y[3]).type_of_value==6)
-                                                                                       else self.parameters[y[2]]), x[1]
-                                                                ))), parameters_srt)
+                                                                   'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and self.parameters[y[2]] in [None, ''])
+                                                                   else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name if (Attribute.objects.get(pk=y[3]).type_of_value==5)
+
+                                                                   else [list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(i)][0] for i in self.parameters[y[2]]] if (Attribute.objects.get(pk=y[3]).type_of_value==6)
+                                                                   else self.parameters[y[2]]
+
+                                                                   ), x[1]
+                                                                ))),
+                                parameters_srt)
 
         return mark_safe('<br>'.join(list(parameters_display)))
-        # return 'pass'
 
-    # {"2": {"cat_position": 0, "mini_attributes": {"1": {"name": "Тип нагревателя", "full_id": "1-1", "pos_atr": 1},
-    #                                               "7": {"name": "Всякий атрибут1", "full_id": "5-7", "pos_atr": 0}}},
-    #  "5": {"cat_position": 1, "mini_attributes": {"3": {"name": null, "full_id": "3-3", "pos_atr": 0},
-    #                                               "4": {"name": null, "full_id": "3-4", "pos_atr": 1}}}}
-    # [[0, [[1, None], [2, None]]]]
-    # [[0, [[1, None], [2, None]]], [1, [[0, None], [1, None]]]]
-    # [[[1, None], [2, None]], [[0, None], [1, None]]]
-    # [[[0, 'Всякий атрибут1'], [1, 'Тип нагревателя']], [[0, None], [1, None]]]
-
+    get_shot_parameters.short_description = "Мини характеристики товара"
     get_shot_parameters = property(get_shot_parameters)
 
     class Meta:
@@ -201,14 +198,6 @@ class Product(models.Model):
 
     def __str__(self):
         return "%s" % self.name
-
-
-# [[0, [[0, '1-1', 'ск. ииц'], [1, '2-2', 'материал']]]]
-# [[[0, '1-1', 'ск. ииц'], [1, '2-2', 'материал']]]
-# def save(self, *args, **kwargs):
-#     if not self.slug:
-#         self.slug = get_unique_slug(self, 'name', 'slug')
-#     super().save(*args, **kwargs)
 
 
 class ProductImage(models.Model):

@@ -201,7 +201,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
 
         ("Характеристики", {
             # 'classes': ('collapse',),
-            'fields': ('parameters', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
+            'fields': ('parameters', 'get_shot_parameters', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
             'classes': ('order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage', 'baton-tab-inline-pricesothershop', ),
         }),
 
