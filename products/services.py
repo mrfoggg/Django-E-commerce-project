@@ -42,6 +42,11 @@ class CategoryInProductFormActions:
     def delete_attributes(self, category):
         print("RUN DEL ATR")
         self.instance.description += 'Удалена категория %s <br>' % category
+        category_id = str(category.id)
+        if category_id in self.instance.shot_parameters_structure.keys():
+            self.instance.shot_parameters_structure.pop(category_id)
+        if category_id in self.instance.mini_parameters_structure.keys():
+            self.instance.mini_parameters_structure.pop(category_id)
         # if str(category.id) in self.instance.parameters_structure.keys():
         #     self.product.parameters_structure.pop(str(category.id))
         #
@@ -60,21 +65,34 @@ class CategoryInProductFormActions:
             self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
 
             category = form_line.cleaned_data['category']
+            category_id = str(category.id)
             # добаввление мини-характеристик
             mini_attributes = category.related_mini_attributes.all()
             if mini_attributes.exists():
-                pass
-
-# добаввление кратких-характеристик
-            shot_attributes = category.related_shot_attributes.all()
-            if shot_attributes.exists():
-                category_id = str(category.id)
                 attributes = dict(list(map(lambda x:
                                            (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
                                             dict(pos_atr=x[0],
                                                  full_id='%s-%s' % (
-                                                    AttributesInGroup.objects.get(id=x[1]).group_id,
-                                                    AttributesInGroup.objects.get(id=x[1]).attribute_id),
+                                                     AttributesInGroup.objects.get(id=x[1]).group_id,
+                                                     AttributesInGroup.objects.get(id=x[1]).attribute_id),
+                                                 name=x[2] if x[2] != {} else AttributesInGroup.objects.get(
+                                                     id=x[1]).attribute.name,
+                                                 value={},
+                                                 id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
+                                           mini_attributes.values_list('position', 'attribute', 'name', ))))
+
+                self.instance.mini_parameters_structure[category_id] = {
+                    'cat_position': form_line.cleaned_data['position_category'], 'shot_attributes': attributes}
+
+            # добаввление кратких-характеристик
+            shot_attributes = category.related_shot_attributes.all()
+            if shot_attributes.exists():
+                attributes = dict(list(map(lambda x:
+                                           (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
+                                            dict(pos_atr=x[0],
+                                                 full_id='%s-%s' % (
+                                                     AttributesInGroup.objects.get(id=x[1]).group_id,
+                                                     AttributesInGroup.objects.get(id=x[1]).attribute_id),
                                                  name=x[2],
                                                  id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
                                            shot_attributes.values_list('position', 'attribute', 'name', ))))
