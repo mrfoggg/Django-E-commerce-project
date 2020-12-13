@@ -75,7 +75,7 @@ class CategoryInProductFormActions:
                                                  full_id='%s-%s' % (
                                                      AttributesInGroup.objects.get(id=x[1]).group_id,
                                                      AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                                 name=x[2] if x[2] != {} else AttributesInGroup.objects.get(
+                                                 name=x[2] if x[2] not in [None, {}] else AttributesInGroup.objects.get(
                                                      id=x[1]).attribute.name,
                                                  value={},
                                                  id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
@@ -102,8 +102,10 @@ class CategoryInProductFormActions:
 
         # если категория изменена
         elif 'category' in form_line.changed_data:
+            old_category = Category.objects.get(id=form_line.initial['category'])
+            new_category = form_line.cleaned_data['category']
             self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (
-                Category.objects.get(id=form_line.initial['category']), form_line.cleaned_data['category'])
+                old_category, new_category)
         # если только изменен порядок следования категорий
         else:
             self.instance.description += "Изменен порядок категории %s на %s <br>" % (

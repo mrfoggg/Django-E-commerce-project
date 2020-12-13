@@ -101,7 +101,7 @@ class Product(models.Model):
                                             on_delete=models.SET_NULL, verbose_name='Коллекция категорий')
 
     parameters = models.JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
-    parameters_structure = models.JSONField(default=dict, blank=True, verbose_name='Структура характеристик')
+    parameters_structure = models.JSONField(default=dict, blank=True, verbose_name='')
     sorted_parameters_structure = models.JSONField(default=list, blank=True,
                                                    verbose_name='Сортированная структура характеристик')
 
@@ -188,7 +188,7 @@ class Product(models.Model):
 
         return mark_safe('<br>'.join(list(parameters_display)))
 
-    get_shot_parameters.short_description = "Мини характеристики товара"
+    get_shot_parameters.short_description = "Краткие характеристики товара"
     get_shot_parameters = property(get_shot_parameters)
 
     class Meta:

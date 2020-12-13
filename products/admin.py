@@ -128,6 +128,7 @@ class MiniParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_adm
             kwargs["queryset"] = AttributesInGroup.objects.filter(group__in=request._obj_)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+
 class PricesOtherShopInline(nested_admin.NestedTabularInline):
     model = PricesOtherShop
     fielfs = ('created', 'shop', 'price', 'updated', 'url', 'info')
@@ -138,9 +139,44 @@ class PricesOtherShopInline(nested_admin.NestedTabularInline):
 
 @admin.register(Category)
 class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, DraggableMPTTAdmin, ):
-    fields = (
-        ('name', 'parent'), ('slug', 'id', 'is_active'), ('image', 'image_view',), ('sign', 'sign_view'), 'description',
-        ('created', 'updated'))
+    fieldsets = (
+        (
+            'Основное', {
+                'fields': (
+                    ('name', 'parent'),
+                    ('slug', 'id', 'is_active'),
+                    ('created', 'updated'),
+                ),
+                'classes': ('tab-fs-none',)
+            }
+        ),
+        (
+            'Изображения', {
+                'fields': (
+                    'image', 'sign'
+                ),
+                'classes': ('tab-fs-none',)
+            }
+        ),
+        (
+            'Описание', {
+                'fields': (
+                    'description',
+                ),
+                'classes': (
+                    'order-1',
+                    'baton-tabs-init',
+                    'baton-tab-inline-related_groups',
+                    'baton-tab-inline-related_shot_attributes',
+                    'baton-tab-inline-related_mini_attributes',
+                    'baton-tab-inline-related_products',
+                )
+            }
+        )
+    )
+    # fields = (
+    #     ('name', 'parent'), ('slug', 'id', 'is_active'), ('image', 'image_view',), ('sign', 'sign_view'), 'description',
+    #     ('created', 'updated'))
     list_display = ('tree_actions', 'indented_title', 'self_attribute_group',)
     model = Category
     prepopulated_fields = {"slug": ("name",)}
@@ -176,7 +212,8 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     list_editable = ('rating', 'is_active',)
     model = Product
     prepopulated_fields = {"slug": ("name",)}
-    readonly_fields = ('created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters' )
+    readonly_fields = (
+    'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters')
     list_filter = (('admin_category', TreeRelatedFieldListFilter),)
     inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
     change_form_template = "products/product_changeform.html"
@@ -185,28 +222,31 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
             'fields': (
                 ('name', 'art',), ('slug', 'admin_category'),
                 ('brand', 'is_active',),
-                ('created', 'updated',), ),
+                ('created', 'updated',),),
             'classes': ('tab-fs-none',),
         }),
 
-        ("Габбариты и вес", 
-            {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box', 'weight')),
-            'classes': ('tab-fs-none',),
-        }),
+        ("Габбариты и вес",
+         {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box', 'weight')),
+          'classes': ('tab-fs-none',),
+          }),
 
         ("Разное", {
-            'fields': (('warranty','url', ),),
-            # 'classes': ('wide,')
+            'fields': (('warranty', 'url',), ),
+            'classes': ('tab-fs-none',),
         }),
 
         ("Характеристики", {
             # 'classes': ('collapse',),
-            'fields': ('parameters', 'get_shot_parameters', 'description', 'parameters_structure', 'mini_parameters_structure', 'shot_parameters_structure', 'is_active_custom_order_group', 'get_category_collection_link',),
-            'classes': ('order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage', 'baton-tab-inline-pricesothershop', ),
+            'fields': (
+                ('parameters', 'get_shot_parameters',), ('description', 'parameters_structure'), ('is_active_custom_order_group',
+            'get_category_collection_link',)),
+            'classes': (
+            'order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage',
+            'baton-tab-inline-pricesothershop',),
         }),
 
     )
-
 
     def response_change(self, request, obj):
         if "_save_copy" in request.POST:
@@ -316,6 +356,7 @@ class CategoryCollectionAdmin(nested_admin.NestedModelAdmin):
     model = CategoryCollection
     form = CategoryCollectionForm
     inlines = (ItemOfCustomOrderGroupInline,)
+
 
 @admin.register(SomeSites)
 class SomeSitesAdmin(nested_admin.NestedModelAdmin):
