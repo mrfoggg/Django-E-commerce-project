@@ -1,14 +1,12 @@
-Django
+django
 django-debug-toolbar
 django-filebrowser
-django-js-asset
 django-json-widget
 django-mptt
 django-summernote
 Pillow
-PySnooper
 pytils
 django-nested-admin
 django-baton
-requests
+pysnooper
 psycopg2-binary

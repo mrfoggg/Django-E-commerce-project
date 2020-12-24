@@ -15,7 +15,6 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -41,10 +40,10 @@ INSTALLED_APPS = [
     'django_summernote',
     'mptt',
     'nested_admin',
-# Простые инструменты для обработки строк на русском языке (выберите правильную форму для множественного числа,
+    # Простые инструменты для обработки строк на русском языке (выберите правильную форму для множественного числа,
     # словесное представление чисел, дат на русском языке без локали, транслитерации и т. д.)
     'pytils',
-    'django_json_widget' ,
+    'django_json_widget',
     'pysnooper',
     # 'debug_toolbar',
     'home',
@@ -85,7 +84,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ecommersDjango3.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
@@ -99,7 +97,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -119,7 +116,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -132,7 +128,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -148,7 +143,6 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-
 INTERNAL_IPS = [
     # ...
     '127.0.0.1',
@@ -163,7 +157,7 @@ BATON = {
     'SITE_TITLE': 'Baton',
     'INDEX_TITLE': 'Site administration',
     'SUPPORT_HREF': 'https://github.com/otto-torino/django-baton/issues',
-    'COPYRIGHT': 'copyright © 2017 <a href="https://www.otto.to.it">Otto srl</a>', # noqa
+    'COPYRIGHT': 'copyright © 2017 <a href="https://www.otto.to.it">Otto srl</a>',  # noqa
     'POWERED_BY': '<a href="https://www.otto.to.it">Otto srl</a>',
     'CONFIRM_UNSAVED_CHANGES': True,
     'SHOW_MULTIPART_UPLOADING': True,
@@ -174,7 +168,7 @@ BATON = {
     'MENU_TITLE': 'Menu',
     'GRAVATAR_DEFAULT_IMG': 'retro',
     'MENU': (
-        { 'type': 'title', 'label': 'Пользователи', 'apps': ('auth', ) },
+        {'type': 'title', 'label': 'Пользователи', 'apps': ('auth',)},
         {
             'type': 'app',
             'name': 'auth',
@@ -191,24 +185,25 @@ BATON = {
                 },
             )
         },
-        { 'type': 'title', 'label': 'Товары', 'apps': ('products', ) },
-        { 'type': 'free', 'label': 'Каталог', 'default_open': True, 'children': [
+        {'type': 'title', 'label': 'Товары', 'apps': ('products',)},
+        {'type': 'free', 'label': 'Каталог', 'default_open': True, 'children': [
             {'type': 'model', 'label': 'Список товаров', 'name': 'product', 'app': 'products'},
             {'type': 'model', 'label': 'Категории товаров', 'name': 'category', 'app': 'products'},
             {'type': 'model', 'label': 'Сочетания категорий', 'name': 'categorycollection', 'app': 'products'},
             {'type': 'model', 'label': 'Бренды', 'name': 'brand', 'app': 'products'},
             {'type': 'model', 'label': 'Страны', 'name': 'country', 'app': 'products'},
             {'type': 'model', 'label': 'Фото товаров', 'name': 'productimage', 'app': 'products'},
-        ] },
-        { 'type': 'free', 'label': 'Характеристики', 'default_open': True, 'children': [
+        ]},
+        {'type': 'free', 'label': 'Характеристики', 'default_open': True, 'children': [
             {'type': 'model', 'label': 'Группы атрибутов', 'name': 'attrgroup', 'app': 'products'},
             {'type': 'model', 'label': 'Атрибуты', 'name': 'attribute', 'app': 'products'},
             {'type': 'model', 'label': 'Значения атрибутов', 'name': 'attributevalue', 'app': 'products'},
-        ] },
-        { 'type': 'free', 'label': 'Custom Link', 'url': 'http://www.google.it', 'perms': ('flatpages.add_flatpage', 'auth.change_user') },
-        { 'type': 'free', 'label': 'My parent voice', 'default_open': True, 'children': [
-            { 'type': 'free', 'label': 'Another custom link', 'url': 'http://www.google.it' },
-        ] },
+        ]},
+        {'type': 'free', 'label': 'Custom Link', 'url': 'http://www.google.it', 'perms': ('flatpages.add_flatpage',
+                                                                                          'auth.change_user')},
+        {'type': 'free', 'label': 'My parent voice', 'default_open': True, 'children': [
+            {'type': 'free', 'label': 'Another custom link', 'url': 'http://www.google.it'},
+        ]},
     ),
     # 'ANALYTICS': {
     #     'CREDENTIALS': os.path.join(BASE_DIR, 'credentials.json'),

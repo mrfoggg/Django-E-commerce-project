@@ -70,29 +70,24 @@ class CategoryInProductFormActions:
             mini_attributes = category.related_mini_attributes.all()
             if mini_attributes.exists():
                 attributes = dict(list(map(lambda x:
-                                           (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                            dict(pos_atr=x[0],
-                                                 full_id='%s-%s' % (
+                                           ('%s-%s' % (
                                                      AttributesInGroup.objects.get(id=x[1]).group_id,
                                                      AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                                 name=x[2] if x[2] not in [None, {}] else AttributesInGroup.objects.get(
-                                                     id=x[1]).attribute.name,
-                                                 value={},
-                                                 id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
-                                           mini_attributes.values_list('position', 'attribute', 'name', ))))
-
+                                            dict(pos_atr=x[0],
+                                                 name=x[2] if x[2] not in [None, {}] else AttributesInGroup.objects.get(d=x[1]).attribute.name,
+                                                 value=None,
+                                                 )), mini_attributes.values_list('position', 'attribute', 'name', ))))
                 self.instance.mini_parameters_structure[category_id] = {
-                    'cat_position': form_line.cleaned_data['position_category'], 'shot_attributes': attributes}
+                    'cat_position': form_line.cleaned_data['position_category'], 'mini_attributes': attributes}
 
             # добаввление кратких-характеристик
             shot_attributes = category.related_shot_attributes.all()
             if shot_attributes.exists():
                 attributes = dict(list(map(lambda x:
-                                           (str(AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                            dict(pos_atr=x[0],
-                                                 full_id='%s-%s' % (
+                                           ('%s-%s' % (
                                                      AttributesInGroup.objects.get(id=x[1]).group_id,
                                                      AttributesInGroup.objects.get(id=x[1]).attribute_id),
+                                            dict(pos_atr=x[0],
                                                  name=x[2],
                                                  id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
                                            shot_attributes.values_list('position', 'attribute', 'name', ))))

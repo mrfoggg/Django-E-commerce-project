@@ -58,9 +58,9 @@ class ProductAttributesField(forms.MultiValueField):
                 sorted_list_of_attribute_id = map(lambda x: int(x[1]), sorted_list_of_attribute_id_with_position)
                 return list(sorted_list_of_attribute_id)
 
-# получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов
-# а так же множество atr_id_set всех id атрибутов для дальнейшего получения словаря attribute_parameters_dict {id atr: { 'name':___, 'type_of_value':____,
-            #                                                                                       'value_list':____}}
+# получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов а так
+            # же множество atr_id_set всех id атрибутов для дальнейшего получения словаря attribute_parameters_dict {
+            # id atr: { 'name':___, 'type_of_value':____, 'value_list':____}}
             if mode == 'custom':
                 for category_and_group in custom_order_group:
                     category_id = category_and_group[0]
@@ -74,9 +74,11 @@ class ProductAttributesField(forms.MultiValueField):
                     atr_id_set.update(sorted_list_of_attribute_id)
 
             if mode == "standart":
-                category_list = map(lambda x: [x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']], parameters_structure.items())
+                category_list = map(lambda x: [x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']],
+                                    parameters_structure.items())
                 for category in sorted(category_list):
-                    group_list = map(lambda y: [y[1]['group_position'], int(y[0]), y[1]['attributes']], category[2].items())
+                    group_list = map(lambda y: [y[1]['group_position'], int(y[0]), y[1]['attributes']],
+                                     category[2].items())
                     for group in sorted(group_list):
                         attribute_items = group[2].items()
                         sorted_list_of_attribute_id = Get_attribute_id(attribute_items)
@@ -94,7 +96,8 @@ class ProductAttributesField(forms.MultiValueField):
                 link = reverse('admin:products_category_change', args=(id_and_name[0],))
                 category_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
 
- # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы (в данном случае со ссылкой на группу)
+ # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы (в данном случае со
+            # ссылкой на группу)
             group_names_dict = {}
             group_data_list = AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name')
             for id_and_name in group_data_list:
@@ -107,6 +110,7 @@ class ProductAttributesField(forms.MultiValueField):
             attribute_parameters_dict = {}
             attributes_data_query = Attribute.objects.filter(id__in=atr_id_list).only('id', 'name', 'type_of_value',
                                                                                       'value_list')
+            # print(attributes_data_query)
             for attribute in attributes_data_query:
                 attribute_parameters_dict[attribute.id] = {'name': attribute.name,
                                                            'type_of_value': attribute.type_of_value,
@@ -143,13 +147,11 @@ class ProductAttributesField(forms.MultiValueField):
                     elif atr_type == 4:
                         field = forms.BooleanField(required=False)
                     elif atr_type == 5:
-                        # ch = list(zip(itertools.count(), atr_variants))
                         ch = list(atr_variants.values_list('id', 'name'))
                         ch.append([None, '--- Выберите значение ---'])
                         field = forms.ChoiceField(choices=ch, required=False)
 
                     elif atr_type == 6:
-                        # ch = list(zip(itertools.count(), atr_variants))
                         ch = list(atr_variants.values_list('id', 'name'))
                         field = forms.MultipleChoiceField(choices=ch, required=False)
 
@@ -224,7 +226,8 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
             list_of_sets_products = []
             considences_list = set()
             for form in self.forms:
-                # products = set(map(lambda x: str(x.product),form.cleaned_data['category'].related_products.select_related('product').all()))
+                # products = set(map(lambda x: str(x.product),form.cleaned_data[
+                # 'category'].related_products.select_related('product').all()))
                 products = Product.objects.filter(related_categories__category=form.cleaned_data['category'])
                 list_of_sets_products.append(products)
             i = 0
@@ -242,7 +245,8 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                 i += 1
             if considences_list:
                 raise ValidationError(
-                    'Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать в товарах: "%s"' % ', '.join(
+                    'Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать '
+                    'в товарах: "%s"' % ', '.join(
                         map(lambda x: x.name, considences_list)))
 
 
@@ -255,8 +259,8 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
         if self.has_changed():
             total_form_count = self.total_form_count()
             total_deleted_forms = len(self.deleted_forms)
-            # если неудаленных форм не одна тогда проверить весь сет на дубли групп атрибутов, обновить КК, обновить атрибуты,
-            # если одна то обнулить КК, обновить атрибуты
+            # если неудаленных форм не одна тогда проверить весь сет на дубли групп атрибутов, обновить КК,
+            # обновить атрибуты, если одна то обнулить КК, обновить атрибуты
             if (total_form_count - total_deleted_forms) > 1:
                 self.group_duplicate_check()
                 # цикл добавления id категорий для определения коллекции категорий после этого цикла.

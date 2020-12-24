@@ -65,7 +65,7 @@ class Category(MPTTModel):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
 
 class Product(models.Model):
@@ -165,31 +165,70 @@ class Product(models.Model):
         # # x[0] - это id категории, x[1] - ее содержимое
         # упорядоченый по порядковому номеру категорий список:
         # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
-        parameters_srt = sorted(list(map(lambda x: [x[1]['cat_position'],
-                                                    sorted(list(map(lambda y: [y[1]['pos_atr'],
-                                                                               Attribute.objects.get(pk=y[1]['id']).name if (y[1]['name'] is None) else y[1]['name'],
-                                                                               y[1]['full_id'],
-                                                                               y[1]['id']
-                                                                               ],
-                                                                    x[1]['shot_attributes'].items())
-                                                                ))],
-                                         self.shot_parameters_structure.items())))
+        parameters_srt = sorted(list(map(
+            lambda x: [  # x - одна из категорий (id, {'cat_position': pos, "shot_attributes": {})
+                x[1]['cat_position'],
+                sorted(list(map(
+                    lambda y: [  # y - атрибут (full_id: {'id': id, 'name': custom_atr_name, 'pos_atr': pos }
+                        y[1]['pos_atr'],
+                        Attribute.objects.get(pk=y[1]['id']).name if (y[1]['name'] in [None, '']) else y[1]['name'],
+                        y[0],  # full_id для получения значения атрибута
+                        y[1]['id']  # id нужен для получения имени атрибута
+                    ],
+                    x[1]['shot_attributes'].items())))  # список  атрибутов в категории
+            ],
+            self.shot_parameters_structure.items())))  # список категорий
+
         # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
-        parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1],
-                                                                   'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and self.parameters[y[2]] in [None, ''])
-                                                                   else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name if (Attribute.objects.get(pk=y[3]).type_of_value==5)
-
-                                                                   else [list(AttributeValue.objects.filter(attribute__id=y[3]).values_list('name'))[int(i)][0] for i in self.parameters[y[2]]] if (Attribute.objects.get(pk=y[3]).type_of_value==6)
-                                                                   else self.parameters[y[2]]
-
-                                                                   ), x[1]
-                                                                ))),
-                                parameters_srt)
+        parameters_display = map(
+            lambda x: '<br>'.join(list(map(
+                lambda y: '%s - %s' % (
+                    y[1],
+                    'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and
+                                     self.parameters[y[2]] in [None, ''])
+                    else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name
+                    if (Attribute.objects.get(pk=y[3]).type_of_value == 5)
+                    else list(map(
+                        lambda x: x.name,
+                        AttributeValue.objects.filter(pk__in=list(map(
+                            int,
+                            self.parameters[y[2]])))))
+                    if (Attribute.objects.get(pk=y[3]).type_of_value == 6)
+                    else self.parameters[y[2]]),
+                x[1]))),  # категория без порядкового номера
+            parameters_srt)  # отсортированый перечень категорий
 
         return mark_safe('<br>'.join(list(parameters_display)))
 
     get_shot_parameters.short_description = "Краткие характеристики товара"
     get_shot_parameters = property(get_shot_parameters)
+
+    def get_mini_parameters(self):
+        # # x[0] - это id категории, x[1] - ее содержимое
+        # упорядоченый по порядковому номеру категорий список:
+        # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
+        parameters_srt = sorted(list(map(lambda x: [
+            x[1]['cat_position'],
+
+            sorted(list(map(lambda y:
+                            [
+                                y[1]['pos_atr'],
+                                y[1]['name'],
+                                y[1]['value']
+                            ],
+                            x[1]['mini_attributes'].items()
+                            )))
+        ],
+                                         self.mini_parameters_structure.items()
+                                         )))
+        # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
+        parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1], 'value'), x[1]))),
+                                 parameters_srt)
+
+        return mark_safe('<br>'.join(list(parameters_display)))
+
+    get_mini_parameters.short_description = "Характеристики на выдаче категории"
+    get_mini_parameters = property(get_mini_parameters)
 
     class Meta:
         ordering = ['name']
@@ -508,7 +547,8 @@ class AttrGroupInCategory(models.Model):
             related_categories__category__in=other_category_related_products)
         if self.group in other_group_related_products:
             raise ValidationError(
-                "Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для некоторых товаров:" %
+                "Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для "
+                "некоторых товаров:" %
                 (self.group, self.category)
             )
 
@@ -726,13 +766,16 @@ class AttributesInGroup(models.Model):
 
 class CategoryCollection(models.Model):
     category_list = TreeManyToManyField('Category', blank=True, default=None, verbose_name='Список категорий', )
-    # additional_id = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, verbose_name='Дополнительный id')
+    # additional_id = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True,
+    # verbose_name='Дополнительный id')
     is_active_custom_order_group = models.BooleanField(default=True,
                                                        verbose_name='Применить индивидуальный порядок групп атрибутов')
     is_active_custom_order_shot_parameters = models.BooleanField(default=True,
-                                                                 verbose_name='Применить индивидуальный порядок кратких характеристик')
+                                                                 verbose_name='Применить индивидуальный порядок '
+                                                                              'кратких характеристик')
     is_active_custom_order_mini_parameters = models.BooleanField(default=True,
-                                                                 verbose_name='Применить индивидуальный порядок мини характеристик')
+                                                                 verbose_name='Применить индивидуальный порядок мини '
+                                                                              'характеристик')
 
     class Meta:
         verbose_name = "Набор категорий с индивидуальным порядком групп атрибутов"
@@ -802,14 +845,15 @@ class ShotParametersOfProduct(models.Model):
     category = TreeForeignKey('Category', blank=True, null=True, default=None, on_delete=models.CASCADE,
                               verbose_name='Категория', related_name='related_shot_attributes')
     name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
-                            verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
+                            verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута '
+                                         'желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в кратких характеристиках товара')
 
     position = models.PositiveIntegerField("Position", null=True)
 
     class Meta:
-        verbose_name = "Атрибут для отображения в блоке кратких характеристик товара"
-        verbose_name_plural = "Блок кратких характеристик товара"
+        verbose_name = "Атрибут для отображения в блоке кратких характеристик товаров"
+        verbose_name_plural = "Блок кратких характеристик товаров"
         ordering = ('position',)
 
     def __str__(self):
@@ -825,13 +869,14 @@ class MiniParametersOfProduct(models.Model):
     category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.CASCADE,
                               verbose_name='Категория', related_name='related_mini_attributes')
     name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
-                            verbose_name='Название для мини характеристик (оставить пустым если названиие атрибута желаете оставить тем же)')
+                            verbose_name='Название для атрибута в выдаче товаров (оставить пустым если названиие '
+                                         'атрибута желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в мини характеристиках товара')
     position = models.PositiveIntegerField("Position", null=True)
 
     class Meta:
-        verbose_name = "Атрибут для отображения в блоке мини характеристик товара"
-        verbose_name_plural = "Блок мини характеристик товара"
+        verbose_name = "Атрибут для отображения в выдаче товаров"
+        verbose_name_plural = "Блок хар-к для выдачи товаров"
         ordering = ('position',)
 
     def __str__(self):
