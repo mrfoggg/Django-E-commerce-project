@@ -11,13 +11,19 @@
     {% for cat_1 in categories %}
         {% if cat_1.have_children %}
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" data-toggle="dropdown" href={% url 'category'  cat_1.slug %} role="button" aria-haspopup="true" aria-expanded="false">{{cat_1}}</a>
+                <a class="nav-link dropdown-toggle" data-toggle="dropdown" href={% url 'category'  cat_1.slug %}
+                        role="button" aria-haspopup="true" aria-expanded="false">{{cat_1}}</a>
                 <div class="dropdown-menu">
                     {% for cat_2 in cat_1.children_category %}
                         <a class="dropdown-item" href={% url 'category'  cat_2.slug %}>{{cat_2}}</a>
                         <div class="level_3_items">
                             {% for cat_3 in cat_2.children_category %}
-                                <a class="nav-link" href={% url 'category'  cat_3.slug %}><p>{{cat_3}}</p></a>
+                                <a class="dropdown-item" href={% url 'category'  cat_3.slug %}><p>{{cat_3}}</p></a>
+                                <div class="level_4_items">
+                                    {% for cat_4 in cat_3.children_category %}
+                                        <a class="nav-link" href={% url 'category'  cat_4.slug %}><p>{{cat_4}}</p></a>
+                                    {% endfor %}
+                                </div>
                             {% endfor %}
                         </div>
                     {% endfor %}

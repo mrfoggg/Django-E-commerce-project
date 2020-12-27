@@ -189,7 +189,7 @@ class Product(models.Model):
                     else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name
                     if (Attribute.objects.get(pk=y[3]).type_of_value == 5)
                     else list(map(
-                        lambda x: x.name,
+                        lambda z: z.name,
                         AttributeValue.objects.filter(pk__in=list(map(
                             int,
                             self.parameters[y[2]])))))
