@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 from django.db.models import Max
 from .utils import get_unique_slug
+from collections import namedtuple
+from operator import attrgetter
 
 
 class Category(MPTTModel):
@@ -162,40 +164,42 @@ class Product(models.Model):
     get_link_refresh = property(get_link_refresh)
 
     def get_shot_parameters(self):
-        # # x[0] - это id категории, x[1] - ее содержимое
-        # упорядоченый по порядковому номеру категорий список:
-        # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
+        attribute_data = namedtuple('attribute_data', 'pos name full_id id')
         parameters_srt = sorted(list(map(
-            lambda x: [  # x - одна из категорий (id, {'cat_position': pos, "shot_attributes": {})
-                x['cat_position'],
+            lambda cat: [  # одна из категорий (id, {'cat_position': pos, "shot_attributes": {})
+                cat['cat_position'],
                 sorted(list(map(
-                    lambda y: [  # y - атрибут (full_id: {'id': id, 'name': custom_atr_name, 'pos_atr': pos }
-                        y[1]['pos_atr'],
-                        Attribute.objects.get(pk=y[1]['id']).name if (y[1]['name'] in [None, '']) else y[1]['name'],
-                        y[0],  # full_id для получения значения атрибута
-                        y[1]['id']  # id нужен для получения имени атрибута
-                    ],
-                    x['shot_attributes'].items())))  # список  атрибутов в категории
+                    lambda attr: attribute_data(
+                        # y - атрибут (full_id: {'id': id, 'name': custom_atr_name, 'pos_atr': pos }
+                        attr[1]['pos_atr'],
+                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] in [None, '']) else attr[1][
+                            'name'],
+                        attr[0],  # full_id для получения значения атрибута
+                        attr[1]['id']  # id нужен для получения имени атрибута
+                    ),
+                    cat['shot_attributes'].items())),  # список  атрибутов в категории attr
+                    key=attrgetter('pos'))  # сортировать по ключу 'pos'
             ],
-            self.shot_parameters_structure.values())))  # список категорий
+            self.shot_parameters_structure.values())))  # список категорий cat
 
-        # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
+        # убираем порядковые номера, составляем список из строк "имя атрибута - значение атрибута",
+        # атрибуты в категориях делаем построчно для вывода
         parameters_display = map(
-            lambda x: '<br>'.join(list(map(
-                lambda y: '%s - %s' % (
-                    y[1],
-                    'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and
-                                     self.parameters[y[2]] in [None, ''])
-                    else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name if Attribute.objects.get(
-                            pk=y[3]).type_of_value == 5
+            lambda cat: '<br>'.join(list(map(
+                lambda attr_data: '%s - %s' % (
+                    attr_data.name,
+                    'не указано' if (Attribute.objects.get(pk=attr_data.id).type_of_value in [5, 6] and
+                                     self.parameters[attr_data.full_id] in [None, ''])
+                    else AttributeValue.objects.get(pk=int(self.parameters[attr_data.full_id])).name if
+                    Attribute.objects.get(pk=attr_data.id).type_of_value == 5
                     else mark_safe(', '.join(list(map(
-                        lambda z: z.name,
+                        lambda val: val.name,
                         AttributeValue.objects.filter(pk__in=list(map(
                             int,
-                            self.parameters[y[2]])))))))
-                    if (Attribute.objects.get(pk=y[3]).type_of_value == 6)
-                    else self.parameters[y[2]]),
-                x[1]))),  # категория без порядкового номера
+                            self.parameters[attr_data.full_id])))))))
+                    if (Attribute.objects.get(pk=attr_data.id).type_of_value == 6)
+                    else self.parameters[attr_data.full_id]),
+                cat[1]))),  # категория без порядкового номера
             parameters_srt)  # отсортированый перечень категорий
 
         return mark_safe('<br>'.join(list(parameters_display)))
