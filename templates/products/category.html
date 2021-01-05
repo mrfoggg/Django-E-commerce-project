@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block title %}
+    <title> категория </title>
+{% endblock title %}
+
 {% block content %}
 <h4>Товары категории "{{category.name}}"</h4>
 {% if products_list %}

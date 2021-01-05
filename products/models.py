@@ -167,7 +167,7 @@ class Product(models.Model):
         # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
         parameters_srt = sorted(list(map(
             lambda x: [  # x - одна из категорий (id, {'cat_position': pos, "shot_attributes": {})
-                x[1]['cat_position'],
+                x['cat_position'],
                 sorted(list(map(
                     lambda y: [  # y - атрибут (full_id: {'id': id, 'name': custom_atr_name, 'pos_atr': pos }
                         y[1]['pos_atr'],
@@ -175,9 +175,9 @@ class Product(models.Model):
                         y[0],  # full_id для получения значения атрибута
                         y[1]['id']  # id нужен для получения имени атрибута
                     ],
-                    x[1]['shot_attributes'].items())))  # список  атрибутов в категории
+                    x['shot_attributes'].items())))  # список  атрибутов в категории
             ],
-            self.shot_parameters_structure.items())))  # список категорий
+            self.shot_parameters_structure.values())))  # список категорий
 
         # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
         parameters_display = map(
@@ -186,13 +186,13 @@ class Product(models.Model):
                     y[1],
                     'не указано' if (Attribute.objects.get(pk=y[3]).type_of_value in [5, 6] and
                                      self.parameters[y[2]] in [None, ''])
-                    else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name
-                    if (Attribute.objects.get(pk=y[3]).type_of_value == 5)
-                    else list(map(
+                    else AttributeValue.objects.get(pk=int(self.parameters[y[2]])).name if Attribute.objects.get(
+                            pk=y[3]).type_of_value == 5
+                    else mark_safe(', '.join(list(map(
                         lambda z: z.name,
                         AttributeValue.objects.filter(pk__in=list(map(
                             int,
-                            self.parameters[y[2]])))))
+                            self.parameters[y[2]])))))))
                     if (Attribute.objects.get(pk=y[3]).type_of_value == 6)
                     else self.parameters[y[2]]),
                 x[1]))),  # категория без порядкового номера
@@ -207,20 +207,18 @@ class Product(models.Model):
         # # x[0] - это id категории, x[1] - ее содержимое
         # упорядоченый по порядковому номеру категорий список:
         # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
-        parameters_srt = sorted(list(map(lambda x: [
-            x[1]['cat_position'],
-
-            sorted(list(map(lambda y:
-                            [
-                                y[1]['pos_atr'],
-                                y[1]['name'],
-                                y[1]['value']
-                            ],
-                            x[1]['mini_attributes'].items()
-                            )))
-        ],
-                                         self.mini_parameters_structure.items()
-                                         )))
+        parameters_srt = sorted(list(map(
+            lambda x: [
+                x['cat_position'],
+                sorted(list(map(
+                    lambda y: [
+                        y['pos_atr'],
+                        y['name'],
+                        y['value']
+                    ],
+                    x['mini_attributes'].values())))
+            ],
+            self.mini_parameters_structure.values())))
         # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
         parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1], 'value'), x[1]))),
                                  parameters_srt)

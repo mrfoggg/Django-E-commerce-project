@@ -24,7 +24,7 @@ SECRET_KEY = '0kgy5_u#6unrbrjm^yb4p367+q28_%qdo1*7k98plq_9_ez((1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'pysnooper',
     # 'debug_toolbar',
     'home',
-    'products',
+    'products.apps.ProductsAppConfig',
     'baton.autodiscover',
 ]
 
@@ -145,11 +145,10 @@ STATICFILES_DIRS = [
 INTERNAL_IPS = [
     # ...
     '127.0.0.1',
+    # '0.0.0.0:8000'
     # ...
 ]
 X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-ALLOWED_HOSTS = ['*']
 
 BATON = {
     'SITE_HEADER': 'Baton',
