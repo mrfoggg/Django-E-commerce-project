@@ -205,12 +205,12 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
 
 @admin.register(Product)
 class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
-    summernote_fields = ('description',)
     form = ProductForm
+    model = Product
+    summernote_fields = ('description',)
     list_display = ('art', 'name', 'rating', 'get_product_category_link', 'is_active')
     list_display_links = ('name',)
-    list_editable = ('rating', 'is_active',)
-    model = Product
+    list_editable = ("rating", 'is_active',)
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = (
         'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters',
@@ -273,8 +273,8 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
 
-    def image_view(self, obj):
-        return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
+    # def image_view(self, obj):
+    #     return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
 
 
 @admin.register(Country)

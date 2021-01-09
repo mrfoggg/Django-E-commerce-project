@@ -12,10 +12,9 @@ from django_json_widget.widgets import JSONEditorWidget
 class ProductAttributesWidget(forms.MultiWidget):
     template_name = "products/product_attribute_widget.html"
 
-    def __init__(self, widgets=[], keys_atr=None, inst=None):
+    def __init__(self, widgets=[], keys_atr=None):
         self.keys = keys_atr
         super(ProductAttributesWidget, self).__init__(widgets)
-
 
     def decompress(self, value):
         val = []
@@ -31,7 +30,7 @@ class ProductAttributesWidget(forms.MultiWidget):
 
 
 class ProductAttributesField(forms.MultiValueField):
-    def __init__(self, instance, label='', *args, **kwargs):
+    def __init__(self, instance, *args, **kwargs):
         list_fields = []
         list_widgets = []
         self.list_keys_attribute = []
@@ -52,11 +51,11 @@ class ProductAttributesField(forms.MultiValueField):
             parameters_structure = instance.parameters_structure
             custom_order_group = instance.custom_order_group
 
-            def Get_attribute_id(attribute_items):
+            def get_attribute_id(attr_it):
                 sorted_list_of_attribute_id_with_position = sorted(
-                    map(lambda x: [x[1]['atr_position'], x[0]], attribute_items))
-                sorted_list_of_attribute_id = map(lambda x: int(x[1]), sorted_list_of_attribute_id_with_position)
-                return list(sorted_list_of_attribute_id)
+                    map(lambda x: [x[1]['atr_position'], x[0]], attr_it))
+                srtd_list_of_attribute_id = map(lambda x: int(x[1]), sorted_list_of_attribute_id_with_position)
+                return list(srtd_list_of_attribute_id)
 
 # получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов а так
             # же множество atr_id_set всех id атрибутов для дальнейшего получения словаря attribute_parameters_dict {
@@ -67,7 +66,7 @@ class ProductAttributesField(forms.MultiValueField):
                     group_id = category_and_group[1]
                     attribute_items = parameters_structure[str(category_id)]['groups_attributes'][str(group_id)][
                         'attributes'].items()
-                    sorted_list_of_attribute_id = Get_attribute_id(attribute_items)
+                    sorted_list_of_attribute_id = get_attribute_id(attribute_items)
                     group_item = [category_id, group_id, sorted_list_of_attribute_id]
                     group_items_list.append(group_item)
                     group_id_list.append(group_id)
@@ -81,7 +80,7 @@ class ProductAttributesField(forms.MultiValueField):
                                      category[2].items())
                     for group in sorted(group_list):
                         attribute_items = group[2].items()
-                        sorted_list_of_attribute_id = Get_attribute_id(attribute_items)
+                        sorted_list_of_attribute_id = get_attribute_id(attribute_items)
                         group_item = [category[1], group[1], sorted_list_of_attribute_id]
                         group_items_list.append(group_item)
                         group_id_list.append(group[1])
@@ -169,7 +168,7 @@ class ProductAttributesField(forms.MultiValueField):
                     list_widgets.append(field.widget)
                     self.list_keys_attribute.append("%s-%s" % (group_id, atr_id))
 
-        self.widget = ProductAttributesWidget(widgets=list_widgets, inst=instance, keys_atr=self.list_keys_attribute)
+        self.widget = ProductAttributesWidget(widgets=list_widgets, keys_atr=self.list_keys_attribute)
         super(ProductAttributesField, self).__init__(fields=list_fields, required=False, require_all_fields=False,
                                                      label='', *args, **kwargs)
 

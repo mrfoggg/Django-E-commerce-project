@@ -166,11 +166,10 @@ class Product(models.Model):
     def get_shot_parameters(self):
         attribute_data = namedtuple('attribute_data', 'pos name full_id id')
         parameters_srt = sorted(list(map(
-            lambda cat: [  # одна из категорий (id, {'cat_position': pos, "shot_attributes": {})
+            lambda cat: [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
                 cat['cat_position'],
                 sorted(list(map(
                     lambda attr: attribute_data(
-                        # y - атрибут (full_id: {'id': id, 'name': custom_atr_name, 'pos_atr': pos }
                         attr[1]['pos_atr'],
                         Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] in [None, '']) else attr[1][
                             'name'],
@@ -312,8 +311,10 @@ class ProductInCategory(models.Model):
         unique_together = ('product', 'category')
 
     def __str__(self):
-        name = Product.objects.filter(id=self.product_id).values_list('name')[0][0]
-        category = Category.objects.filter(id=self.category_id).values_list('name')[0][0]
+        name = Product.objects.filter(id=self.product_id).values_list('name', flat=True)[0]
+        category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
+        # name = Product.objects.filter(id=self.product_id).values_list('name')[0][0]
+        # category = Category.objects.filter(id=self.category_id).values_list('name')[0][0]
         return '"%s" - %s' % (category, name)
 
     def get_product_category_link(self):
@@ -332,12 +333,13 @@ class ProductInCategory(models.Model):
         # optimized version
         groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id)
         # groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id',)
-        categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category')
+        categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category', flat=True)
         other_groups_allredy_in_product = AttrGroup.objects.filter(
             related_categories__category__id__in=categories_this_product)
         common_groups = groups_in_this_category.intersection(other_groups_allredy_in_product)
         if common_groups.exists():
-            common_groups_names = map(lambda x: x[0], common_groups.values_list('name'))
+            common_groups_names = common_groups.values_list('name', flat=True)
+            # common_groups_names = map(lambda x: x[0], common_groups.values_list('name'))
             raise ValidationError(
                 'Новое значение содержит категорию или товар с дублирующейся группой атрибутов: "%s"' % ', '.join(
                     common_groups_names)
@@ -786,11 +788,13 @@ class CategoryCollection(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        old_group_list = set(map(lambda x: x[0],
-                                 ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
-                                     'group_id')))
+        # old_group_list = set(map(lambda x: x[0],
+        #                          ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
+        #                              'group_id')))
+        old_group_list = set(ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
+            'group_id', flat=True))
 
-        if self.id != None:
+        if self.id:
             new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(
                 related_categories__category__in=self.category_list.all())))
         else:
