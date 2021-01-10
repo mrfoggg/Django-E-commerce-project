@@ -5,7 +5,7 @@ from django.db.models import Count
 from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup, Attribute, AttributeValue
 
 
-def update_addict_atr(prod, new_param):
+def update_addict_attr(prod, new_param):
     shot_atr_field = prod.shot_parameters_structure
     mini_atr_field = prod.mini_parameters_structure
     parameters = prod.parameters
@@ -18,7 +18,7 @@ def update_addict_atr(prod, new_param):
                 atr['value'] = val
                 if type_val == 5 and val != '':
                     atr['value_str'] = AttributeValue.objects.get(pk=int(val)).name
-                if type_val == 6 and val != []:
+                elif type_val == 6 and val != []:
                     atr['value_str'] = list(AttributeValue.objects.filter(
                         pk__in=list(map(
                             int,

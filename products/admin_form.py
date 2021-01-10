@@ -3,7 +3,7 @@ from django import forms
 from django.forms import HiddenInput, TextInput, NumberInput
 from django.db.models import Count
 from .models import *
-from .services import CategoryInProductFormActions, update_addict_atr
+from .services import CategoryInProductFormActions, update_addict_attr
 from django_json_widget.widgets import JSONEditorWidget
 
 
@@ -24,8 +24,8 @@ class ProductAttributesWidget(forms.MultiWidget):
                 val.append(value[v])
             return val
         else:
-            for v in self.keys:
-                val.append(None)
+            # for v in self.keys:
+            #     val.append(None)
             return {}
 
 
@@ -193,7 +193,7 @@ class ProductForm(forms.ModelForm):
 
         if 'parameters' in self.changed_data:
             print('ХАРАКТЕРИСТИКИ ИЗМЕНЕННЫ')
-            update_addict_atr(self.instance, cleaned_data['parameters'])
+            update_addict_attr(self.instance, cleaned_data['parameters'])
 
     class Meta:
         model = Product

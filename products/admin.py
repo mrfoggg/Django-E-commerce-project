@@ -213,8 +213,8 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     list_editable = ("rating", 'is_active',)
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = (
-        'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters',
-        'get_mini_parameters')
+        'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters_admin_field',
+        'get_mini_parameters_admin_field')
     list_filter = (('admin_category', TreeRelatedFieldListFilter),)
     inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
     change_form_template = "products/product_changeform.html"
@@ -240,7 +240,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
         ("Характеристики", {
             # 'classes': ('collapse',),
             'fields': (
-                ('parameters',), ('get_shot_parameters', 'get_mini_parameters'),
+                ('parameters',), ('get_shot_parameters_admin_field', 'get_mini_parameters_admin_field'),
                 ('description', 'parameters_structure'),
                 ('is_active_custom_order_group', 'get_category_collection_link',)),
             'classes': (

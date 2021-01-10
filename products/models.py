@@ -163,7 +163,8 @@ class Product(models.Model):
 
     get_link_refresh = property(get_link_refresh)
 
-    def get_shot_parameters(self):
+    @staticmethod
+    def get_sorted_addict_attr(attr_field):
         attribute_data = namedtuple('attribute_data', 'pos name full_id id value_str value')
         parameters_srt = sorted(list(map(
             lambda cat: [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
@@ -171,8 +172,7 @@ class Product(models.Model):
                 sorted(list(map(
                     lambda attr: attribute_data(
                         attr[1]['pos_atr'],
-                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1][
-                            'name'],
+                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1]['name'],
                         attr[0],  # full_id для получения значения атрибута
                         attr[1]['id'],
                         attr[1]['value_str'],
@@ -181,7 +181,19 @@ class Product(models.Model):
                     cat['attributes'].items())),  # список  атрибутов в категории attr
                     key=attrgetter('pos'))  # сортировать по ключу 'pos'
             ],
-            self.shot_parameters_structure.values())))  # 
+            attr_field.values())))
+        return parameters_srt
+
+    @property
+    def sorted_shot_attributes(self):
+        return self.get_sorted_addict_attr(self.shot_parameters_structure)
+
+    @property
+    def sorted_mini_attributes(self):
+        return self.get_sorted_addict_attr(self.mini_parameters_structure)
+
+    @staticmethod
+    def reformat_addict_attr_for_admin(attrs_sorted):
         parameters_display = map(
             lambda cat: '<br>'.join(list(map(
                 lambda attr_data: '%s - %s' % (
@@ -190,36 +202,18 @@ class Product(models.Model):
                     else attr_data.value_str
                     ),
                 cat[1]))),  # категория без порядкового номера
-            parameters_srt)  # отсортированый перечень категорий
-
+            attrs_sorted)  # отсортированый перечень категорий
         return mark_safe('<br>'.join(list(parameters_display)))
 
-    get_shot_parameters.short_description = "Краткие характеристики товара"
-    get_shot_parameters = property(get_shot_parameters)
+    def get_shot_parameters_admin_field(self):
+        return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
+    get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
+    get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
 
-    def get_mini_parameters(self):
-        parameters_srt = sorted(list(map(
-            lambda cat: [
-                cat['cat_position'],
-                sorted(list(map(
-                    lambda atr: [
-                        atr['pos_atr'],
-                        atr['name'],
-                    ],
-                    cat['attributes'].values())))
-            ],
-            self.mini_parameters_structure.values())))
-        # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
-        parameters_display = map(
-            lambda cat: '<br>'.join(list(map(
-                lambda atr: '%s - %s' % (atr[1], 'value'), 
-                cat[1]))),
-            parameters_srt)
-
-        return mark_safe('<br>'.join(list(parameters_display)))
-
-    get_mini_parameters.short_description = "Характеристики на выдаче категории"
-    get_mini_parameters = property(get_mini_parameters)
+    def get_mini_parameters_admin_field(self):
+        return self.reformat_addict_attr_for_admin(self.sorted_mini_attributes)
+    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
+    get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)
 
     class Meta:
         ordering = ['name']
