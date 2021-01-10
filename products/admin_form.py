@@ -3,8 +3,9 @@ from django import forms
 from django.forms import HiddenInput, TextInput, NumberInput
 from django.db.models import Count
 from .models import *
-from .services import CategoryInProductFormActions
+from .services import CategoryInProductFormActions, update_addict_atr
 from django_json_widget.widgets import JSONEditorWidget
+
 
 # from django.http import HttpResponseRedirect
 
@@ -26,7 +27,6 @@ class ProductAttributesWidget(forms.MultiWidget):
             for v in self.keys:
                 val.append(None)
             return {}
-
 
 
 class ProductAttributesField(forms.MultiValueField):
@@ -57,9 +57,9 @@ class ProductAttributesField(forms.MultiValueField):
                 srtd_list_of_attribute_id = map(lambda x: int(x[1]), sorted_list_of_attribute_id_with_position)
                 return list(srtd_list_of_attribute_id)
 
-# получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов а так
-            # же множество atr_id_set всех id атрибутов для дальнейшего получения словаря attribute_parameters_dict {
-            # id atr: { 'name':___, 'type_of_value':____, 'value_list':____}}
+            # получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id
+            # атрибутов а так же множество atr_id_set всех id атрибутов для дальнейшего получения словаря
+            # attribute_parameters_dict { id atr: { 'name':___, 'type_of_value':____, 'value_list':____}}
             if mode == 'custom':
                 for category_and_group in custom_order_group:
                     category_id = category_and_group[0]
@@ -86,7 +86,7 @@ class ProductAttributesField(forms.MultiValueField):
                         group_id_list.append(group[1])
                         atr_id_set.update(sorted_list_of_attribute_id)
 
-# получаем словарь category_names_dict где ключ элемнета это id категории а значение это имя категории
+            # получаем словарь category_names_dict где ключ элемнета это id категории а значение это имя категории
             categories_id_list = map(lambda x: int(x), parameters_structure.keys())
             category_names_dict = {}
             categories_data_list = Category.objects.filter(id__in=categories_id_list).values_list('id', 'name')
@@ -95,7 +95,7 @@ class ProductAttributesField(forms.MultiValueField):
                 link = reverse('admin:products_category_change', args=(id_and_name[0],))
                 category_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
 
- # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы (в данном случае со
+            # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы (в данном случае со
             # ссылкой на группу)
             group_names_dict = {}
             group_data_list = AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name')
@@ -104,7 +104,7 @@ class ProductAttributesField(forms.MultiValueField):
                 link = reverse('admin:products_attrgroup_change', args=(id_and_name[0],))
                 group_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
 
-# получаем словарь attribute_parameters_dict где ключ элемента это id атрибута а значение это словарь
+            # получаем словарь attribute_parameters_dict где ключ элемента это id атрибута а значение это словарь
             atr_id_list = list(atr_id_set)
             attribute_parameters_dict = {}
             attributes_data_query = Attribute.objects.filter(id__in=atr_id_list).only('id', 'name', 'type_of_value',
@@ -115,8 +115,8 @@ class ProductAttributesField(forms.MultiValueField):
                                                            'type_of_value': attribute.type_of_value,
                                                            'value_list': attribute.value_list.all()}
 
-# перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов нополняем его
-#             именами категорий, групп
+            # перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов нополняем его
+            #             именами категорий, групп
             for group_item in group_items_list:
                 group_item[0] = category_names_dict[group_item[0]]
                 group_item[1] = [group_item[1], group_names_dict[group_item[1]]]
@@ -191,21 +191,25 @@ class ProductForm(forms.ModelForm):
             err = mark_safe('Структура характеристик была изменена: ' + self.instance.get_link_refresh)
             raise forms.ValidationError(err)
 
+        if 'parameters' in self.changed_data:
+            print('ХАРАКТЕРИСТИКИ ИЗМЕНЕННЫ')
+            update_addict_atr(self.instance, cleaned_data['parameters'])
+
     class Meta:
         model = Product
         fields = '__all__'
         widgets = {
             'parameters_structure': HiddenInput(),
             # 'parameters_structure': JSONEditorWidget,
-            'art': TextInput(attrs={'size':10}),
-            'name': TextInput(attrs={'size':50}),
-            'lenght': NumberInput(attrs={'size':2}),
-            'width': NumberInput(attrs={'size':5}),
-            'height': NumberInput(attrs={'size':3}),
-            'lenght_box': NumberInput(attrs={'size':5}),
-            'width_box': NumberInput(attrs={'size':3}),
-            'height_box': NumberInput(attrs={'size':5}),
-            'weight': NumberInput(attrs={'size':5}),
+            'art': TextInput(attrs={'size': 10}),
+            'name': TextInput(attrs={'size': 50}),
+            'lenght': NumberInput(attrs={'size': 2}),
+            'width': NumberInput(attrs={'size': 5}),
+            'height': NumberInput(attrs={'size': 3}),
+            'lenght_box': NumberInput(attrs={'size': 5}),
+            'width_box': NumberInput(attrs={'size': 3}),
+            'height_box': NumberInput(attrs={'size': 5}),
+            'weight': NumberInput(attrs={'size': 5}),
             # 'warranty': NumberInput(attrs={'size':5}),
             'mini_parameters_structure': JSONEditorWidget,
             'shot_parameters_structure': JSONEditorWidget,
@@ -295,12 +299,13 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                     elif form.has_changed():
                         self.update_attributes(form)
 
+
 class AttrGroupForm(forms.ModelForm):
     class Meta:
         model = AttrGroup
         fields = ('name',)
         widgets = {
-            'name': TextInput(attrs={'size':50}),
+            'name': TextInput(attrs={'size': 50}),
         }
 
 
@@ -309,7 +314,7 @@ class AttributeForm(forms.ModelForm):
         model = AttrGroup
         fields = ('name',)
         widgets = {
-            'name': TextInput(attrs={'size':50}),
+            'name': TextInput(attrs={'size': 50}),
         }
 
 
@@ -374,4 +379,3 @@ class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
             Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
         else:
             Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
-

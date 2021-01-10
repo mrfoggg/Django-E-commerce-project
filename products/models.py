@@ -164,40 +164,31 @@ class Product(models.Model):
     get_link_refresh = property(get_link_refresh)
 
     def get_shot_parameters(self):
-        attribute_data = namedtuple('attribute_data', 'pos name full_id id')
+        attribute_data = namedtuple('attribute_data', 'pos name full_id id value_str value')
         parameters_srt = sorted(list(map(
             lambda cat: [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
                 cat['cat_position'],
                 sorted(list(map(
                     lambda attr: attribute_data(
                         attr[1]['pos_atr'],
-                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] in [None, '']) else attr[1][
+                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1][
                             'name'],
                         attr[0],  # full_id для получения значения атрибута
-                        attr[1]['id']  # id нужен для получения имени атрибута
+                        attr[1]['id'],
+                        attr[1]['value_str'],
+                        attr[1]['value']
                     ),
-                    cat['shot_attributes'].items())),  # список  атрибутов в категории attr
+                    cat['attributes'].items())),  # список  атрибутов в категории attr
                     key=attrgetter('pos'))  # сортировать по ключу 'pos'
             ],
-            self.shot_parameters_structure.values())))  # список категорий cat
-
-        # убираем порядковые номера, составляем список из строк "имя атрибута - значение атрибута",
-        # атрибуты в категориях делаем построчно для вывода
+            self.shot_parameters_structure.values())))  # 
         parameters_display = map(
             lambda cat: '<br>'.join(list(map(
                 lambda attr_data: '%s - %s' % (
                     attr_data.name,
-                    'не указано' if (Attribute.objects.get(pk=attr_data.id).type_of_value in [5, 6] and
-                                     self.parameters[attr_data.full_id] in [None, ''])
-                    else AttributeValue.objects.get(pk=int(self.parameters[attr_data.full_id])).name if
-                    Attribute.objects.get(pk=attr_data.id).type_of_value == 5
-                    else mark_safe(', '.join(list(map(
-                        lambda val: val.name,
-                        AttributeValue.objects.filter(pk__in=list(map(
-                            int,
-                            self.parameters[attr_data.full_id])))))))
-                    if (Attribute.objects.get(pk=attr_data.id).type_of_value == 6)
-                    else self.parameters[attr_data.full_id]),
+                    ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list)
+                    else attr_data.value_str
+                    ),
                 cat[1]))),  # категория без порядкового номера
             parameters_srt)  # отсортированый перечень категорий
 
@@ -207,24 +198,23 @@ class Product(models.Model):
     get_shot_parameters = property(get_shot_parameters)
 
     def get_mini_parameters(self):
-        # # x[0] - это id категории, x[1] - ее содержимое
-        # упорядоченый по порядковому номеру категорий список:
-        # [порядковый номер категории, [порядковый номер атрибута, имя/краткое имя атрибута, полный id, id]]
         parameters_srt = sorted(list(map(
-            lambda x: [
-                x['cat_position'],
+            lambda cat: [
+                cat['cat_position'],
                 sorted(list(map(
-                    lambda y: [
-                        y['pos_atr'],
-                        y['name'],
-                        y['value']
+                    lambda atr: [
+                        atr['pos_atr'],
+                        atr['name'],
                     ],
-                    x['mini_attributes'].values())))
+                    cat['attributes'].values())))
             ],
             self.mini_parameters_structure.values())))
         # убираем порядковые номера, атрибуты в категорях делаем построчно для вывода
-        parameters_display = map(lambda x: '<br>'.join(list(map(lambda y: '%s - %s' % (y[1], 'value'), x[1]))),
-                                 parameters_srt)
+        parameters_display = map(
+            lambda cat: '<br>'.join(list(map(
+                lambda atr: '%s - %s' % (atr[1], 'value'), 
+                cat[1]))),
+            parameters_srt)
 
         return mark_safe('<br>'.join(list(parameters_display)))
 
@@ -850,7 +840,7 @@ class ShotParametersOfProduct(models.Model):
                                   verbose_name='Атрибут для отображения в кратких характеристиках')
     category = TreeForeignKey('Category', blank=True, null=True, default=None, on_delete=models.CASCADE,
                               verbose_name='Категория', related_name='related_shot_attributes')
-    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
+    name = models.CharField(max_length=128, blank=True, null=True, default='', unique=True, db_index=True,
                             verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута '
                                          'желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в кратких характеристиках товара')
@@ -874,7 +864,7 @@ class MiniParametersOfProduct(models.Model):
                                   verbose_name='Атрибут для отображения в мини характеристиках')
     category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.CASCADE,
                               verbose_name='Категория', related_name='related_mini_attributes')
-    name = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True, db_index=True,
+    name = models.CharField(max_length=128, blank=True, null=True, default='', unique=True, db_index=True,
                             verbose_name='Название для атрибута в выдаче товаров (оставить пустым если названиие '
                                          'атрибута желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в мини характеристиках товара')

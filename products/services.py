@@ -2,7 +2,34 @@
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from django.db.models import Count
-from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup
+from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup, Attribute, AttributeValue
+
+
+def update_addict_atr(prod, new_param):
+    shot_atr_field = prod.shot_parameters_structure
+    mini_atr_field = prod.mini_parameters_structure
+    parameters = prod.parameters
+
+    def update(field, param):
+        for cat_id, cat in field.items():
+            for atr_full_id, atr in cat['attributes'].items():
+                type_val = Attribute.objects.get(pk=atr['id']).type_of_value
+                val = param[atr_full_id]
+                atr['value'] = val
+                if type_val == 5 and val != '':
+                    atr['value_str'] = AttributeValue.objects.get(pk=int(val)).name
+                if type_val == 6 and val != []:
+                    atr['value_str'] = list(AttributeValue.objects.filter(
+                        pk__in=list(map(
+                            int,
+                            val
+                        ))
+                    ).values_list('name', flat=True))
+                else:
+                    atr['value_str'] = val
+
+    update(shot_atr_field, new_param)
+    update(mini_atr_field, new_param)
 
 
 class CategoryInProductFormActions:
@@ -14,7 +41,6 @@ class CategoryInProductFormActions:
         self.forms = self.forms
 
     def group_duplicate_check(self):
-        print("RUN DUPLICATE CHECK")
         list_of_query_groups = []
         coincidences_list = set()
         for form in self.forms:
@@ -40,7 +66,6 @@ class CategoryInProductFormActions:
                 ', '.join(map(lambda x: x.name, coincidences_list))))
 
     def delete_attributes(self, category):
-        print("RUN DEL ATR")
         self.instance.description += 'Удалена категория %s <br>' % category
         category_id = str(category.id)
         if category_id in self.instance.shot_parameters_structure.keys():
@@ -58,7 +83,6 @@ class CategoryInProductFormActions:
         #             self.product.parameters.pop('%s-%s' % (group_id, atr_id))
 
     def update_attributes(self, form_line):
-        print("RUN UPDATE ATR")
         # если категория добавлена
         # отладочный фрагмент
         if form_line.initial == {}:
@@ -66,34 +90,36 @@ class CategoryInProductFormActions:
 
             category = form_line.cleaned_data['category']
             category_id = str(category.id)
-            # добаввление мини-характеристик
-            mini_attributes = category.related_mini_attributes.all()
-            if mini_attributes.exists():
-                attributes = dict(list(map(lambda x:
-                                           ('%s-%s' % (
-                                                     AttributesInGroup.objects.get(id=x[1]).group_id,
-                                                     AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                            dict(pos_atr=x[0],
-                                                 name=x[2] if x[2] not in [None, {}] else AttributesInGroup.objects.get(d=x[1]).attribute.name,
-                                                 value=None,
-                                                 )), mini_attributes.values_list('position', 'attribute', 'name', ))))
-                self.instance.mini_parameters_structure[category_id] = {
-                    'cat_position': form_line.cleaned_data['position_category'], 'mini_attributes': attributes}
 
-            # добаввление кратких-характеристик
+            def build_attribute_dict(attributes_query):
+                attributes = dict(list(map(
+                    lambda x:
+                    ('%s-%s' % (
+                        AttributesInGroup.objects.get(id=x.attribute).group_id,
+                        AttributesInGroup.objects.get(id=x.attribute).attribute_id),
+                     dict(pos_atr=x.position,
+                          name=x.name if x.name else AttributesInGroup.objects.get(id=x.attribute).attribute.name,
+                          # name=x.name if x.name not in [None, {}] else '',
+                          id=AttributesInGroup.objects.get(id=x.attribute).attribute_id,
+                          value_str='не указано',
+                          value=''
+                          )),
+                    attributes_query.values_list('position', 'attribute', 'name', named=True))))
+                return attributes
+
+            # добавление кратких-характеристик
             shot_attributes = category.related_shot_attributes.all()
             if shot_attributes.exists():
-                attributes = dict(list(map(lambda x:
-                                           ('%s-%s' % (
-                                                     AttributesInGroup.objects.get(id=x[1]).group_id,
-                                                     AttributesInGroup.objects.get(id=x[1]).attribute_id),
-                                            dict(pos_atr=x[0],
-                                                 name=x[2],
-                                                 id=AttributesInGroup.objects.get(id=x[1]).attribute_id)),
-                                           shot_attributes.values_list('position', 'attribute', 'name', ))))
-
                 self.instance.shot_parameters_structure[category_id] = {
-                    'cat_position': form_line.cleaned_data['position_category'], 'shot_attributes': attributes}
+                    'cat_position': form_line.cleaned_data['position_category'], 'attributes':
+                        build_attribute_dict(shot_attributes)}
+
+            # добавление мини-характеристик
+            mini_attributes = category.related_mini_attributes.all()
+            if mini_attributes.exists():
+                self.instance.mini_parameters_structure[category_id] = {
+                    'cat_position': form_line.cleaned_data['position_category'], 'attributes':
+                        build_attribute_dict(mini_attributes)}
 
         # если категория изменена
         elif 'category' in form_line.changed_data:
@@ -108,8 +134,6 @@ class CategoryInProductFormActions:
             )
 
     def add_category_collection(self, category_set):
-        print("RUN ADD CC")
-        print(category_set)
         # выбираем коллекции нужной длины
         category_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
             cnt=len(category_set))
