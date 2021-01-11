@@ -19,9 +19,6 @@ class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTa
     sortable_field_name = "position"
     extra = 0
 
-    def image_image(self, obj):
-        return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
-
 
 class BrandInLine(admin.TabularInline):
     model = Brand
@@ -174,9 +171,6 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
             }
         )
     )
-    # fields = (
-    #     ('name', 'parent'), ('slug', 'id', 'is_active'), ('image', 'image_view',), ('sign', 'sign_view'), 'description',
-    #     ('created', 'updated'))
     list_display = ('tree_actions', 'indented_title', 'self_attribute_group',)
     model = Category
     prepopulated_fields = {"slug": ("name",)}
@@ -196,10 +190,12 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
             # request._rel_mini_ = []
         return super(CategoryModelAdmin, self).get_form(request, obj, **kwargs)
 
-    def image_view(self, obj):
+    @staticmethod
+    def image_view(obj):
         return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
 
-    def sign_view(self, obj):
+    @staticmethod
+    def sign_view(obj):
         return mark_safe('<img src="{url}" width=40 height=40/>'.format(url=obj.sign.url))
 
 
@@ -276,6 +272,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 ProductImage.objects.create(product=product_copy, image=ph.image)
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
+
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):

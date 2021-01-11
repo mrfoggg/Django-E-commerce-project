@@ -1,13 +1,8 @@
-import itertools
 from django import forms
 from django.forms import HiddenInput, TextInput, NumberInput
 from django.db.models import Count
 from .models import *
 from .services import CategoryInProductFormActions, update_addict_attr
-from django_json_widget.widgets import JSONEditorWidget
-
-
-# from django.http import HttpResponseRedirect
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -95,8 +90,8 @@ class ProductAttributesField(forms.MultiValueField):
                 link = reverse('admin:products_category_change', args=(id_and_name[0],))
                 category_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
 
-            # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы (в данном случае со
-            # ссылкой на группу)
+            # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы
+            # (в данном случае со ссылкой на группу)
             group_names_dict = {}
             group_data_list = AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name')
             for id_and_name in group_data_list:
@@ -115,8 +110,8 @@ class ProductAttributesField(forms.MultiValueField):
                                                            'type_of_value': attribute.type_of_value,
                                                            'value_list': attribute.value_list.all()}
 
-            # перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из id атрибутов нополняем его
-            #             именами категорий, групп
+            # перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из
+            # id атрибутов нополняем его именами категорий, групп
             for group_item in group_items_list:
                 group_item[0] = category_names_dict[group_item[0]]
                 group_item[1] = [group_item[1], group_names_dict[group_item[1]]]
@@ -211,9 +206,6 @@ class ProductForm(forms.ModelForm):
             'height_box': NumberInput(attrs={'size': 5}),
             'weight': NumberInput(attrs={'size': 5}),
             # 'warranty': NumberInput(attrs={'size':5}),
-            'mini_parameters_structure': JSONEditorWidget,
-            'shot_parameters_structure': JSONEditorWidget,
-            'shot_parameters_structure': JSONEditorWidget,
         }
 
 
