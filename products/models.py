@@ -143,6 +143,7 @@ class Product(models.Model):
                 self.category_collection))
         else:
             return "Не назначена"
+
     get_category_collection_link.short_description = 'Коллекия категорий'
     get_category_collection_link = property(get_category_collection_link)
 
@@ -153,11 +154,13 @@ class Product(models.Model):
                                                        cat.name)
             categories_link_list.append(category_link)
         return mark_safe(', '.join(categories_link_list))
+
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
     def get_link_refresh(self):
         return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
+
     get_link_refresh = property(get_link_refresh)
 
     @staticmethod
@@ -197,18 +200,20 @@ class Product(models.Model):
                     attr_data.name,
                     ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list)
                     else attr_data.value_str
-                    ),
+                ),
                 cat[1]))),  # категория без порядкового номера
             attrs_sorted)  # отсортированый перечень категорий
         return mark_safe('<br>'.join(list(parameters_display)))
 
     def get_shot_parameters_admin_field(self):
         return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
+
     get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
     get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
 
     def get_mini_parameters_admin_field(self):
         return self.reformat_addict_attr_for_admin(self.sorted_mini_attributes)
+
     get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
     get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)
 
@@ -288,43 +293,40 @@ class ProductInCategory(models.Model):
     class Meta:
         verbose_name = "Размещение товара в категории "
         verbose_name_plural = "Размещения товара в категории"
-        # ordering = ('position_product',)
         unique_together = ('product', 'category')
 
     def __str__(self):
         name = Product.objects.filter(id=self.product_id).values_list('name', flat=True)[0]
         category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
-        # name = Product.objects.filter(id=self.product_id).values_list('name')[0][0]
-        # category = Category.objects.filter(id=self.category_id).values_list('name')[0][0]
         return '"%s" - %s' % (category, name)
 
     def get_product_category_link(self):
         return self.product.get_product_category_link
+
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
     def self_attribute_group(self):
         return self.category.self_attribute_group
+
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
     def clean(self):
         # optimized version
         groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id)
-        # groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id',)
         categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category', flat=True)
         other_groups_allredy_in_product = AttrGroup.objects.filter(
             related_categories__category__id__in=categories_this_product)
         common_groups = groups_in_this_category.intersection(other_groups_allredy_in_product)
         if common_groups.exists():
             common_groups_names = common_groups.values_list('name', flat=True)
-            # common_groups_names = map(lambda x: x[0], common_groups.values_list('name'))
             raise ValidationError(
                 'Новое значение содержит категорию или товар с дублирующейся группой атрибутов: "%s"' % ', '.join(
                     common_groups_names)
             )
 
-    def create_attributes(self, *args):
+    def create_attributes(self):
         if self.category.related_groups.filter(group__related_attributes__isnull=False):
             category_id = str(self.category_id)
             self.product.parameters_structure[category_id] = {'cat_position': self.position_category,
@@ -344,7 +346,6 @@ class ProductInCategory(models.Model):
         # добавить соответствующую коллекцию категорий - сделано в BaseInlineFormSet
 
     def delete_attributes(self):
-    # def delete_attributes(self, *args, **kwargs):
         category_id = str(self.category_id)
         if category_id in self.product.parameters_structure.keys():
             self.product.parameters_structure.pop(category_id)
@@ -363,11 +364,11 @@ class ProductInCategory(models.Model):
             Max('position_product'))
         if not self.id or self.category_id != self.old_category:
             # if 0:
-            if max_product_position['position_product__max'] != None:
+            if max_product_position['position_product__max'] is not None:
                 self.position_product = max_product_position['position_product__max'] + 1
             else:
                 self.position_product = 0
-        if self.old_category != None and self.old_category != self.category_id:
+        if self.old_category is not None and self.old_category != self.category_id:
             old_category_id = str(self.old_category)
             if old_category_id in self.product.parameters_structure.keys():
                 self.product.parameters_structure.pop(old_category_id)
@@ -375,7 +376,7 @@ class ProductInCategory(models.Model):
                 for atr in Attribute.objects.filter(related_groups__group=group['id']).values('id'):
                     self.product.parameters.pop('%s-%s' % (group['id'], atr['id']))
         super().save(*args, **kwargs)
-        self.create_attributes(self)
+        self.create_attributes()
         # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
 
     def delete(self, *args, **kwargs):
@@ -391,12 +392,12 @@ class AttrGroup(models.Model):
     slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
 
     def self_attributes_links(self):
-        list = []
+        ls = []
         for i in self.related_attributes.all().order_by('position'):
             link_atr = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(i.attribute.id,)),
                                                   i.attribute.name)
-            list.append(link_atr)
-        return mark_safe(', '.join(list))
+            ls.append(link_atr)
+        return mark_safe(', '.join(ls))
 
     self_attributes_links.short_description = 'Содержит атрибуты'
     self_attributes_links = property(self_attributes_links)
@@ -441,23 +442,14 @@ class Attribute(models.Model):
 
     def self_value_variants(self):
         values = self.value_list.all()
-        list = []
+        ls = []
         for i in values:
             link_val = "<a href={}>{}</a>".format(reverse('admin:products_attributevalue_change', args=(i.id,)), i)
-            list.append(link_val)
-        return mark_safe(', '.join(list))
+            ls.append(link_val)
+        return mark_safe(', '.join(ls))
 
     self_value_variants.short_description = 'Список значений '
     self_value_variants = property(self_value_variants)
-
-    # def get_other_copy(self):
-    #     copies = [0]
-    #     for atr in Attribute.objects.filter(name__startswith=self.name + ' (@копия #'):
-    #         left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
-    #         number_of_copy = int(left_part_name[:left_part_name.find(')')])
-    #         copies.append(number_of_copy)
-    #     return max(copies)
-    # get_other_copy = property(get_other_copy)
 
     def delete_attributes(self):
         for atr in self.related_groups.all():
@@ -556,14 +548,14 @@ class AttrGroupInCategory(models.Model):
         return attributes_list_structure
 
     # bulk edition
-    def create_attributes(self, *args, **kwargs):
+    def create_attributes(self):
         group_id = str(self.group_id)
         products_for_update = []
         for prod in self.category.related_products.only('product').select_related('product').all():
             product = prod.product
             category_id = str(self.category_id)
             category_position = prod.position_category
-            if not category_id in product.parameters_structure.keys():
+            if category_id not in product.parameters_structure.keys():
                 product.parameters_structure[category_id] = {'cat_position': category_position, 'groups_attributes': {}}
             if self.group.related_attributes.exists():
                 product.parameters_structure[category_id]['groups_attributes'][group_id] = {
@@ -578,14 +570,14 @@ class AttrGroupInCategory(models.Model):
         # добавить в группу в коллекции категорий
 
     # bulk edition
-    def delete_attributes(self, *args, **kwargs):
+    def delete_attributes(self):
         category_id = str(self.category_id)
         group_id = str(self.group_id)
         products_for_update = []
         for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure',
                                                                                                'parameters'):
             if category_id in product.parameters_structure and group_id in product.parameters_structure[category_id][
-                'groups_attributes']:
+                                                                                                'groups_attributes']:
                 product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
             if not product.parameters_structure[category_id]['groups_attributes']:
                 product.parameters_structure.pop(category_id)
@@ -598,7 +590,7 @@ class AttrGroupInCategory(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         category_id = str(self.category_id)
-        if self.old_group != None and self.old_group != self.group_id:
+        if self.old_group is not None and self.old_group != self.group_id:
             old_group_id = str(self.old_group)
             attributes_id = []
             products_for_update = []
@@ -614,7 +606,7 @@ class AttrGroupInCategory(models.Model):
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
-        if self.old_category != None and self.old_category != self.category_id:
+        if self.old_category is not None and self.old_category != self.category_id:
             old_category_id = str(self.old_category)
             group_attribute_id = str(self.group_id)
             products_for_update = []
@@ -632,7 +624,7 @@ class AttrGroupInCategory(models.Model):
             for cc in CategoryCollection.objects.filter(category_list=self.old_category):
                 cc.update_group_in_product()
 
-        self.create_attributes(self)
+        self.create_attributes()
         for cc in CategoryCollection.objects.filter(category_list=self.category):
             max_position = ItemOfCustomOrderGroup.objects.filter(category_collection_id=cc.id).aggregate(
                 Max('position'))
@@ -645,7 +637,7 @@ class AttrGroupInCategory(models.Model):
             cc.update_group_in_product()
 
     def delete(self, *args, **kwargs):
-        self.delete_attributes(self)
+        self.delete_attributes()
         super().delete(*args, **kwargs)
         for cc in CategoryCollection.objects.filter(category_list=self.category):
             cc.update_group_in_product()
@@ -687,7 +679,7 @@ class AttributesInGroup(models.Model):
     def __str__(self):
         return "%s / %s" % (self.group.name, self.attribute.name)
 
-    def create_attributes(self, *args, **kwargs):
+    def create_attributes(self):
         for cat in self.group.related_categories.select_related('category').all():
             category = cat.category
             category_id = str(category.id)
@@ -696,11 +688,12 @@ class AttributesInGroup(models.Model):
             products_for_update = []
             for product in Product.objects.filter(related_categories__category=category).only('parameters_structure',
                                                                                               'parameters'):
-                if not category_id in product.parameters_structure.keys():
+                if category_id not in product.parameters_structure.keys():
                     product.parameters_structure[category_id] = {'groups_attributes': {}, 'cat_position': cat.position}
-                if not group_id in product.parameters_structure[category_id]['groups_attributes'].keys():
+                if group_id not in product.parameters_structure[category_id]['groups_attributes'].keys():
                     product.parameters_structure[category_id]['groups_attributes'][group_id] = {'attributes': {},
-                                                                                                'group_position': cat.position}
+                                                                                                'group_position':
+                                                                                                    cat.position}
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
                     'atr_position': self.position}
                 if not '%s-%s' % (group_id, atr_id) in product.parameters.keys():
@@ -710,7 +703,7 @@ class AttributesInGroup(models.Model):
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
     # bulk edition
-    def delete_attributes(self, *args, **kwargs):
+    def delete_attributes(self):
         for category in Category.objects.filter(related_groups__group=self.group).only('id'):
             category_id = str(category.id)
             group_id = str(self.group_id)
@@ -733,8 +726,8 @@ class AttributesInGroup(models.Model):
         if self.old_attribute and self.old_attribute != self.attribute:
             for category in Category.objects.filter(related_groups__group=self.group_id):
                 products_for_update = []
-                for product in Product.objects.filter(related_categories__category=category.id).only('parameters',
-                                                                                                     "parameters_structure"):
+                for product in Product.objects.filter(related_categories__category=category.id).only(
+                        'parameters', "parameters_structure"):
                     product.parameters_structure[str(category.id)]['groups_attributes'][str(self.group_id)][
                         'attributes'].pop(str(self.old_attribute))
                     product.parameters.pop('%s-%s' % (str(self.group.id), str(self.old_attribute)))
@@ -743,7 +736,7 @@ class AttributesInGroup(models.Model):
         self.create_attributes()
 
     def delete(self, *args, **kwargs):
-        self.delete_attributes(self)
+        self.delete_attributes()
         super().delete(*args, **kwargs)
 
 
@@ -767,18 +760,13 @@ class CategoryCollection(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # old_group_list = set(map(lambda x: x[0],
-        #                          ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
-        #                              'group_id')))
         old_group_list = set(ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
             'group_id', flat=True))
-
         if self.id:
             new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(
                 related_categories__category__in=self.category_list.all())))
         else:
             new_group_list = set()
-
         if not old_group_list == new_group_list:
             del_group_id = old_group_list - new_group_list
             ItemOfCustomOrderGroup.objects.filter(group_id__in=del_group_id, category_collection=self).delete()
