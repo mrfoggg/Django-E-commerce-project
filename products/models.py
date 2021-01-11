@@ -143,7 +143,6 @@ class Product(models.Model):
                 self.category_collection))
         else:
             return "Не назначена"
-
     get_category_collection_link.short_description = 'Коллекия категорий'
     get_category_collection_link = property(get_category_collection_link)
 
@@ -154,13 +153,11 @@ class Product(models.Model):
                                                        cat.name)
             categories_link_list.append(category_link)
         return mark_safe(', '.join(categories_link_list))
-
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
     def get_link_refresh(self):
         return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
-
     get_link_refresh = property(get_link_refresh)
 
     @staticmethod
@@ -303,13 +300,11 @@ class ProductInCategory(models.Model):
 
     def get_product_category_link(self):
         return self.product.get_product_category_link
-
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
     def self_attribute_group(self):
         return self.category.self_attribute_group
-
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
@@ -348,7 +343,8 @@ class ProductInCategory(models.Model):
         self.product.save()
         # добавить соответствующую коллекцию категорий - сделано в BaseInlineFormSet
 
-    def delete_attributes(self, *args, **kwargs):
+    def delete_attributes(self):
+    # def delete_attributes(self, *args, **kwargs):
         category_id = str(self.category_id)
         if category_id in self.product.parameters_structure.keys():
             self.product.parameters_structure.pop(category_id)
@@ -383,7 +379,7 @@ class ProductInCategory(models.Model):
         # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
 
     def delete(self, *args, **kwargs):
-        self.delete_attributes(self)
+        self.delete_attributes()
         super().delete(*args, **kwargs)
 
 
@@ -454,22 +450,21 @@ class Attribute(models.Model):
     self_value_variants.short_description = 'Список значений '
     self_value_variants = property(self_value_variants)
 
-    def get_other_copy(self):
-        copies = [0]
-        for atr in Attribute.objects.filter(name__startswith=self.name + ' (@копия #'):
-            left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
-            number_of_copy = int(left_part_name[:left_part_name.find(')')])
-            copies.append(number_of_copy)
-        return max(copies)
+    # def get_other_copy(self):
+    #     copies = [0]
+    #     for atr in Attribute.objects.filter(name__startswith=self.name + ' (@копия #'):
+    #         left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
+    #         number_of_copy = int(left_part_name[:left_part_name.find(')')])
+    #         copies.append(number_of_copy)
+    #     return max(copies)
+    # get_other_copy = property(get_other_copy)
 
-    get_other_copy = property(get_other_copy)
-
-    def delete_attributes(self, *args, **kwargs):
+    def delete_attributes(self):
         for atr in self.related_groups.all():
             atr.delete_attributes()
 
     def delete(self, *args, **kwargs):
-        self.delete_attributes(self)
+        self.delete_attributes()
         super().delete(*args, **kwargs)
 
     class Meta:

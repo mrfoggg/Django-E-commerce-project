@@ -8,7 +8,6 @@ from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup, 
 def update_addict_attr(prod, new_param):
     shot_atr_field = prod.shot_parameters_structure
     mini_atr_field = prod.mini_parameters_structure
-    parameters = prod.parameters
 
     def update(field, param):
         for cat_id, cat in field.items():

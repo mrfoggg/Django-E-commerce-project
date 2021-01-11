@@ -203,6 +203,20 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
         return mark_safe('<img src="{url}" width=40 height=40/>'.format(url=obj.sign.url))
 
 
+def save_and_make_copy(objct, model_to_copy):
+    objct.save()
+    objct_copy = copy.copy(objct)
+    objct_copy.id = None
+    objct_copy.slug = None
+    copies = [0]
+    for atr in model_to_copy.objects.filter(name__startswith=objct.name + ' (@копия #'):
+        left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
+        number_of_copy = int(left_part_name[:left_part_name.find(')')])
+        copies.append(number_of_copy)
+    objct_copy.name = objct.name + ' (@копия #%s)' % (max(copies) + 1)
+    return objct_copy
+
+
 @admin.register(Product)
 class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     form = ProductForm
@@ -252,19 +266,9 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
 
     def response_change(self, request, obj):
         if "_save_copy" in request.POST:
-            obj.save()
-            product_copy = copy.copy(obj)
-            product_copy.id = None
-            product_copy.slug = None
+            product_copy = save_and_make_copy(obj, Product)
             product_copy.art = None
             product_copy.url = None
-
-            copies = [0]
-            for prod in Product.objects.filter(name__startswith=obj.name + ' (@копия #'):
-                left_part_name = prod.name[(prod.name.find(' (@копия #') + 10):]
-                number_of_copy = int(left_part_name[:left_part_name.find(')')])
-                copies.append(number_of_copy)
-            product_copy.name = obj.name + ' (@копия #%s)' % (max(copies) + 1)
             product_copy.save()
             for cat in Category.objects.filter(related_products__product_id=obj.id):
                 ProductInCategory.objects.create(product=product_copy, category=cat)
@@ -272,10 +276,6 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 ProductImage.objects.create(product=product_copy, image=ph.image)
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
-
-    # def image_view(self, obj):
-    #     return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
-
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
@@ -299,16 +299,7 @@ class AttrGroupAdmin(nested_admin.NestedModelAdmin):
 
     def response_change(self, request, obj):
         if "_save_copy" in request.POST:
-            obj.save()
-            group_copy = copy.copy(obj)
-            group_copy.id = None
-            group_copy.slug = None
-            copies = [0]
-            for group in AttrGroup.objects.filter(name__startswith=obj.name + ' (@копия #'):
-                left_part_name = group.name[(group.name.find(' (@копия #') + 10):]
-                number_of_copy = int(left_part_name[:left_part_name.find(')')])
-                copies.append(number_of_copy)
-            group_copy.name = obj.name + ' (@копия #%s)' % (max(copies) + 1)
+            group_copy = save_and_make_copy(obj, AttrGroup)
             group_copy.save()
             for atr in Attribute.objects.filter(related_groups__group=obj):
                 AttributesInGroup.objects.create(group=group_copy, attribute=atr)
@@ -331,11 +322,7 @@ class AttributeAdmin(admin.ModelAdmin):
 
     def response_change(self, request, obj):
         if "_save_copy" in request.POST:
-            obj.save()
-            attribute_copy = copy.copy(obj)
-            attribute_copy.id = None
-            attribute_copy.slug = None
-            attribute_copy.name = obj.name + ' (@копия #%s)' % (obj.get_other_copy + 1)
+            attribute_copy = save_and_make_copy(obj, Attribute)
             attribute_copy.save()
             return HttpResponseRedirect(reverse('admin:products_attribute_change', args=(attribute_copy.id,)))
         return super().response_change(request, obj)
