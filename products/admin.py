@@ -14,7 +14,6 @@ from .admin_form import *
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     # fields = ['position', ('image_image', 'image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
     fields = ['position', ('image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
-    readonly_fields = ["image_image"]
     model = ProductImage
     sortable_field_name = "position"
     extra = 0
