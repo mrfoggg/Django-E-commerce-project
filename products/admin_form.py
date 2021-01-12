@@ -13,15 +13,7 @@ class ProductAttributesWidget(forms.MultiWidget):
         super(ProductAttributesWidget, self).__init__(widgets)
 
     def decompress(self, value):
-        val = []
-        if value:
-            for v in self.keys:
-                val.append(value[v])
-            return val
-        else:
-            # for v in self.keys:
-            #     val.append(None)
-            return {}
+        return list(map(lambda x: value[x], self.keys)) if value else {}
 
 
 class ProductAttributesField(forms.MultiValueField):

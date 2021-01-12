@@ -1,7 +1,3 @@
-from unicodedata import category
-
-from django.contrib.postgres import fields
-
 from mptt.admin import TreeRelatedFieldListFilter, DraggableMPTTAdmin
 import copy
 from django.contrib import admin

@@ -347,7 +347,7 @@ class ProductInCategory(models.Model):
             group_id = str(group.id)
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)
-                if (full_id:=f'{group_id}-{atr_id}') in self.product.parameters:
+                if (full_id := f'{group_id}-{atr_id}') in self.product.parameters:
                     self.product.parameters.pop(full_id)
         self.product.save()
         # сделать удаление коллекции категорий из товара - сделано в BaseInlineFormSet
@@ -516,8 +516,8 @@ class AttrGroupInCategory(models.Model):
             related_categories__category__in=other_category_related_products)
         if self.group in other_group_related_products:
             raise ValidationError(
-                f"Невозможно добавить группу атрибутов {self.group} к категории {self.category} так как она будет дублироваться для "
-                "некоторых товаров:"
+                f"Невозможно добавить группу атрибутов {self.group} к категории {self.category} так как она будет "
+                f"дублироваться для некоторых товаров:"
             )
 
     def __init__(self, *args, **kwargs):
@@ -556,7 +556,7 @@ class AttrGroupInCategory(models.Model):
             for atr_id, position in self.get_self_atr_structure_list().items():
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
                     'atr_position': position}
-                if not (full_id:=f'{group_id}-{atr_id}') in product.parameters.keys():
+                if not (full_id := f'{group_id}-{atr_id}') in product.parameters.keys():
                     product.parameters[full_id] = None
             products_for_update.append(product)
         Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
@@ -687,7 +687,7 @@ class AttributesInGroup(models.Model):
                                                                                                     cat.position}
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
                     'atr_position': self.position}
-                if not (full_id:=f'{group_id}-{atr_id}') in product.parameters.keys():
+                if not (full_id := f'{group_id}-{atr_id}') in product.parameters.keys():
                     product.parameters[full_id] = None
                 # product.save()
                 products_for_update.append(product)
@@ -702,7 +702,8 @@ class AttributesInGroup(models.Model):
             products_for_update = []
             for product in Product.objects.filter(related_categories__category__related_groups__group=self.group).only(
                     'parameters', 'parameters_structure'):
-                (groups := product.parameters_structure[category_id]['groups_attributes'])[group_id]['attributes'].pop(atr_id)
+                (groups := product.parameters_structure[category_id]['groups_attributes'])[group_id]['attributes'].\
+                    pop(atr_id)
                 if not groups[group_id]['attributes']:
                     groups.pop(group_id)
                 if not groups:
