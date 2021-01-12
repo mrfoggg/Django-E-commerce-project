@@ -45,7 +45,6 @@ class Category(MPTTModel):
 
     def children_category(self):
         return self.children.filter(is_active=True)
-
     children_category = property(children_category)
 
     class MPTTMeta:
@@ -143,7 +142,6 @@ class Product(models.Model):
                 self.category_collection))
         else:
             return "Не назначена"
-
     get_category_collection_link.short_description = 'Коллекия категорий'
     get_category_collection_link = property(get_category_collection_link)
 
@@ -154,14 +152,12 @@ class Product(models.Model):
                                                        cat.name)
             categories_link_list.append(category_link)
         return mark_safe(', '.join(categories_link_list))
-
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
+    @property
     def get_link_refresh(self):
         return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
-
-    get_link_refresh = property(get_link_refresh)
 
     @staticmethod
     def get_sorted_addict_attr(attr_field):
@@ -207,13 +203,11 @@ class Product(models.Model):
 
     def get_shot_parameters_admin_field(self):
         return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
-
     get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
     get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
 
     def get_mini_parameters_admin_field(self):
         return self.reformat_addict_attr_for_admin(self.sorted_mini_attributes)
-
     get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
     get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)
 
@@ -223,7 +217,7 @@ class Product(models.Model):
         verbose_name_plural = "Список товаров"
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
 
 class ProductImage(models.Model):
@@ -239,7 +233,7 @@ class ProductImage(models.Model):
     position = models.PositiveIntegerField("Position", null=True)
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
     class Meta:
         ordering = ('position',)
@@ -259,7 +253,7 @@ class Country(models.Model):
         verbose_name_plural = "Страны"
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
 
 class Brand(models.Model):
@@ -271,7 +265,7 @@ class Brand(models.Model):
                                 verbose_name='Страна брэнда')
 
     def __str__(self):
-        return "%s (%s)" % (self.name, self.country)
+        return f'{self.name} ({self.country})'
 
     class Meta:
         verbose_name = "Торговая марка"
@@ -298,7 +292,7 @@ class ProductInCategory(models.Model):
     def __str__(self):
         name = Product.objects.filter(id=self.product_id).values_list('name', flat=True)[0]
         category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
-        return '"%s" - %s' % (category, name)
+        return f'"{category}" - {name}'
 
     def get_product_category_link(self):
         return self.product.get_product_category_link
@@ -353,8 +347,8 @@ class ProductInCategory(models.Model):
             group_id = str(group.id)
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)
-                if '%s-%s' % (group_id, atr_id) in self.product.parameters:
-                    self.product.parameters.pop('%s-%s' % (group_id, atr_id))
+                if (full_id:=f'{group_id}-{atr_id}') in self.product.parameters:
+                    self.product.parameters.pop(full_id)
         self.product.save()
         # сделать удаление коллекции категорий из товара - сделано в BaseInlineFormSet
 
@@ -374,7 +368,7 @@ class ProductInCategory(models.Model):
                 self.product.parameters_structure.pop(old_category_id)
             for group in AttrGroup.objects.filter(related_categories__category=self.old_category).values('id'):
                 for atr in Attribute.objects.filter(related_groups__group=group['id']).values('id'):
-                    self.product.parameters.pop('%s-%s' % (group['id'], atr['id']))
+                    self.product.parameters.pop(f"{group['id']}-{atr['id']}")
         super().save(*args, **kwargs)
         self.create_attributes()
         # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
@@ -407,7 +401,7 @@ class AttrGroup(models.Model):
         verbose_name_plural = "Группы атрибутов"
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
     def delete(self, *args, **kwargs):
         for group_cat in self.related_categories.all():
@@ -465,7 +459,7 @@ class Attribute(models.Model):
         ordering = ['position']
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
     @property
     def getlink(self):
@@ -486,7 +480,7 @@ class AttributeValue(models.Model):
     slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
 
     def __str__(self):
-        return "%s" % self.name
+        return self.name
 
     class Meta:
         verbose_name = "Значение атрибутов"
@@ -522,9 +516,8 @@ class AttrGroupInCategory(models.Model):
             related_categories__category__in=other_category_related_products)
         if self.group in other_group_related_products:
             raise ValidationError(
-                "Невозможно добавить группу атрибутов '%s' к категории '%s' так как она будет дублироваться для "
-                "некоторых товаров:" %
-                (self.group, self.category)
+                f"Невозможно добавить группу атрибутов {self.group} к категории {self.category} так как она будет дублироваться для "
+                "некоторых товаров:"
             )
 
     def __init__(self, *args, **kwargs):
@@ -533,7 +526,7 @@ class AttrGroupInCategory(models.Model):
         self.old_group = self.group_id
 
     def __str__(self):
-        return "%s" % self.group.name
+        return self.group.name
 
     def self_attributes_links(self):
         return self.group.self_attributes_links
@@ -563,8 +556,8 @@ class AttrGroupInCategory(models.Model):
             for atr_id, position in self.get_self_atr_structure_list().items():
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
                     'atr_position': position}
-                if not '%s-%s' % (group_id, atr_id) in product.parameters.keys():
-                    product.parameters['%s-%s' % (group_id, atr_id)] = None
+                if not (full_id:=f'{group_id}-{atr_id}') in product.parameters.keys():
+                    product.parameters[full_id] = None
             products_for_update.append(product)
         Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
         # добавить в группу в коллекции категорий
@@ -602,7 +595,7 @@ class AttrGroupInCategory(models.Model):
                 if not product.parameters_structure[category_id]['groups_attributes']:
                     product.parameters_structure.pop(category_id)
                 for atr_id in attributes_id:
-                    product.parameters.pop('%s-%s' % (old_group_id, atr_id))
+                    product.parameters.pop(f'{old_group_id}-{atr_id}')
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -617,7 +610,7 @@ class AttrGroupInCategory(models.Model):
                     product.parameters_structure.pop(old_category_id)
                 if not product.related_categories.filter(category=category_id).exists():
                     for atr_id in self.get_self_atr_structure_list().keys():
-                        product.parameters.pop('%s-%s' % (group_attribute_id, atr_id))
+                        product.parameters.pop(f'{group_attribute_id}-{atr_id}')
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -662,13 +655,11 @@ class AttributesInGroup(models.Model):
 
     def self_value_variants(self):
         return self.attribute.self_value_variants
-
     self_value_variants.short_description = 'Список значений'
     self_value_variants = property(self_value_variants)
 
     def type_of_value(self):
         return self.attribute.get_type_of_value_display()
-
     type_of_value.short_description = 'Тип данных'
     type_of_value = property(type_of_value)
 
@@ -677,7 +668,7 @@ class AttributesInGroup(models.Model):
         self.old_attribute = self.attribute_id
 
     def __str__(self):
-        return "%s / %s" % (self.group.name, self.attribute.name)
+        return f"{self.group.name} / {self.attribute.name}"
 
     def create_attributes(self):
         for cat in self.group.related_categories.select_related('category').all():
@@ -696,8 +687,8 @@ class AttributesInGroup(models.Model):
                                                                                                     cat.position}
                 product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][atr_id] = {
                     'atr_position': self.position}
-                if not '%s-%s' % (group_id, atr_id) in product.parameters.keys():
-                    product.parameters['%s-%s' % (self.group.id, self.attribute.id)] = None
+                if not (full_id:=f'{group_id}-{atr_id}') in product.parameters.keys():
+                    product.parameters[full_id] = None
                 # product.save()
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
@@ -711,12 +702,12 @@ class AttributesInGroup(models.Model):
             products_for_update = []
             for product in Product.objects.filter(related_categories__category__related_groups__group=self.group).only(
                     'parameters', 'parameters_structure'):
-                product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'].pop(atr_id)
-                if not product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes']:
-                    product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
-                if not product.parameters_structure[category_id]['groups_attributes']:
+                (groups := product.parameters_structure[category_id]['groups_attributes'])[group_id]['attributes'].pop(atr_id)
+                if not groups[group_id]['attributes']:
+                    groups.pop(group_id)
+                if not groups:
                     product.parameters_structure.pop(category_id)
-                product.parameters.pop('%s-%s' % (group_id, atr_id))
+                product.parameters.pop(f'{group_id}-{atr_id}')
                 products_for_update.append(product)
             Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
 
@@ -730,7 +721,7 @@ class AttributesInGroup(models.Model):
                         'parameters', "parameters_structure"):
                     product.parameters_structure[str(category.id)]['groups_attributes'][str(self.group_id)][
                         'attributes'].pop(str(self.old_attribute))
-                    product.parameters.pop('%s-%s' % (str(self.group.id), str(self.old_attribute)))
+                    product.parameters.pop(f'{self.group.id}-{self.old_attribute}')
                     products_for_update.append(product)
                 Product.objects.bulk_update(products_for_update, ['parameters_structure', 'parameters'])
         self.create_attributes()
@@ -794,14 +785,11 @@ class ItemOfCustomOrderGroup(models.Model):
 
     def self_attributes_links(self):
         return self.group.self_attributes_links
-
     self_attributes_links.short_description = 'Содержит атрибуты'
 
     def getlink_group(self):
         return self.group.getlink
-
     getlink_group.short_description = 'Группа атрибутов'
-
     self_attributes_links = property(self_attributes_links)
 
     class Meta:
@@ -831,9 +819,9 @@ class ShotParametersOfProduct(models.Model):
 
     def __str__(self):
         if self.name:
-            return ' - "%s"' % self.name
+            return f' - {self.name}'
         else:
-            return ' - "%s"' % self.attribute.attribute.name
+            return f' - {self.attribute.attribute.name}'
 
 
 class MiniParametersOfProduct(models.Model):
@@ -854,9 +842,9 @@ class MiniParametersOfProduct(models.Model):
 
     def __str__(self):
         if self.name:
-            return ' - "%s"' % self.name
+            return f' - {self.name}'
         else:
-            return ' - "%s"' % self.attribute.attribute.name
+            return f' - {self.attribute.attribute.name}'
 
 
 class SomeSites(models.Model):
@@ -872,7 +860,7 @@ class SomeSites(models.Model):
                           verbose_name='Ссылка на сайт)')
 
     def __str__(self):
-        return "%s (%s)" % (self.name, self.get_role_display())
+        return f"{self.name} ({self.get_role_display()})" 
 
     class Meta:
         verbose_name = "Сторонний сайт"
@@ -893,7 +881,7 @@ class PricesOtherShop(models.Model):
                             verbose_name='Краткое описание)')
 
     def __str__(self):
-        return "цена магазина %s" % self.shop.name
+        return f"цена магазина {self.shop.name}"
 
     class Meta:
         verbose_name = "Цена конкурента"

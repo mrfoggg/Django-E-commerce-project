@@ -1,4 +1,3 @@
-# from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from django.db.models import Count
@@ -10,7 +9,7 @@ def update_addict_attr(prod, new_param):
     mini_atr_field = prod.mini_parameters_structure
 
     def update(field, param):
-        for cat_id, cat in field.items():
+        for cat in field.values():
             for atr_full_id, atr in cat['attributes'].items():
                 type_val = Attribute.objects.get(pk=atr['id']).type_of_value
                 val = param[atr_full_id]
@@ -44,6 +43,7 @@ class CategoryInProductFormActions:
         coincidences_list = set()
         for form in self.forms:
             if self.can_delete and self._should_delete_form(form):
+                print('SHOULD_DELETE')
                 continue
             print(form.cleaned_data['category'])
             groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
