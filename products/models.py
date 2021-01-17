@@ -99,18 +99,15 @@ class Product(models.Model):
                                     verbose_name='Категория товаров админ-панели')
     category_collection = models.ForeignKey('CategoryCollection', blank=True, null=True, default=None,
                                             on_delete=models.SET_NULL, verbose_name='Коллекция категорий')
-
     parameters = models.JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
     parameters_structure = models.JSONField(default=dict, blank=True, verbose_name='')
     sorted_parameters_structure = models.JSONField(default=list, blank=True,
                                                    verbose_name='Сортированная структура характеристик')
-
     custom_order_group = models.JSONField(default=list, blank=True,
                                           verbose_name='Индивидуальный порядок групп атрибутов для сочетания категорий')
     is_active_custom_order_group = models.BooleanField(default=True,
                                                        verbose_name='Использоватть порядок групп атрибутов '
                                                                     'определенный в коллекции категорий')
-
     shot_parameters_structure = models.JSONField(default=dict, blank=True,
                                                  verbose_name='Структура кратких характеристик товара')
     mini_parameters_structure = models.JSONField(default=dict, blank=True,
@@ -121,11 +118,10 @@ class Product(models.Model):
     mini_parameters_custom_structure = models.JSONField(default=dict, blank=True,
                                                         verbose_name='Структура мини характеристик товара для '
                                                                      'сочетания категорий')
-
-    lenght = models.FloatField(blank=True, null=True, verbose_name='Длина, см')
+    length = models.FloatField(blank=True, null=True, verbose_name='Длина, см')
     width = models.FloatField(blank=True, null=True, verbose_name='Ширина, см')
     height = models.FloatField(blank=True, null=True, verbose_name='Высота, см')
-    lenght_box = models.FloatField(blank=True, null=True, verbose_name='Длина упаковки, см')
+    length_box = models.FloatField(blank=True, null=True, verbose_name='Длина упаковки, см')
     width_box = models.FloatField(blank=True, null=True, verbose_name='Ширина упаковки, см')
     height_box = models.FloatField(blank=True, null=True, verbose_name='Высота упаковки, см')
     weight = models.FloatField(blank=True, null=True, verbose_name='Вес, кг')
@@ -290,7 +286,6 @@ class ProductInCategory(models.Model):
     class Meta:
         verbose_name = "Размещение товара в категории "
         verbose_name_plural = "Размещения товара в категории"
-        unique_together = ('product', 'category')
 
     def __str__(self):
         name = Product.objects.filter(id=self.product_id).values_list('name', flat=True)[0]
