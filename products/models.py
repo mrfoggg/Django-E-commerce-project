@@ -46,26 +46,25 @@ class Category(MPTTModel):
         order_insertion_by = ['name']
 
     def self_attribute_group(self):
-        group_links = [
-            "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(i.group_id,)), i.group)
-            for i in self.related_groups.all()
-        ]
+        group_links = ["<a href=%s>%s</a>" % (reverse('admin:products_attrgroup_change', args=(i.group_id,)), i.group)
+                       for i in self.related_groups.all()]
         return mark_safe(', '.join(group_links))
+
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
     @property
     def getlink(self):
-        link = "<a href={}>{}</a>".format(reverse('admin:products_category_change', args=(self.id,)), self.name)
+        link = "<a href=%s>%s</a>" % (reverse('admin:products_category_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
+    @property
     def have_children(self):
         return self.children.filter(is_active=True).exists()
 
+    @property
     def children_category(self):
         return self.children.filter(is_active=True)
-
-    children_category = property(children_category)
 
 
 class Product(models.Model):
@@ -138,9 +137,8 @@ class Product(models.Model):
         return self.name
 
     def get_category_collection_link(self):
-        # if self.category_collection_id is not None:
         if self.category_collection_id:
-            return mark_safe("<a href={}>{}</a>".format(
+            return mark_safe("<a href=%s>%s</a>" % (
                 reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)),
                 self.category_collection))
         else:
@@ -162,27 +160,32 @@ class Product(models.Model):
 
     @property
     def get_link_refresh(self):
-        return "<a href={}>{}</a>".format(reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
+        return "<a href=%s>%s</a>" % (reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
 
     @staticmethod
     def get_sorted_addict_attr(attr_field):
         attribute_data = namedtuple('attribute_data', 'pos name full_id id value_str value')
-        parameters_srt = sorted([
-            [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
-                cat['cat_position'],
-                sorted([
-                    attribute_data(
-                        attr[1]['pos_atr'],
-                        Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1]['name'],
-                        attr[0],  # full_id для получения значения атрибута
-                        attr[1]['id'],
-                        attr[1]['value_str'],
-                        attr[1]['value']
-                    )
-                    for attr in cat['attributes'].items()],  # список  атрибутов в категории attr
-                    key=attrgetter('pos'))  # сортировать по ключу 'pos'
-            ]
-            for cat in attr_field.values()])
+        parameters_srt = sorted(
+            [
+                [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
+                    cat['cat_position'],
+                    sorted(
+                        [
+                            attribute_data(
+                                attr[1]['pos_atr'],
+                                Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1][
+                                    'name'],
+                                attr[0],  # full_id для получения значения атрибута
+                                attr[1]['id'],
+                                attr[1]['value_str'],
+                                attr[1]['value']
+                            )
+                            for attr in cat['attributes'].items()
+                        ],  # список  атрибутов в категории attr
+                        key=attrgetter('pos'))  # сортировать по ключу 'pos'
+                ]
+                for cat in attr_field.values()
+            ])
         return parameters_srt
 
     @property
@@ -195,16 +198,17 @@ class Product(models.Model):
 
     @staticmethod
     def reformat_addict_attr_for_admin(attrs_sorted):
-        parameters_display = map(
-            lambda cat: '<br>'.join(list(map(
-                lambda attr_data: '%s - %s' % (
-                    attr_data.name,
-                    ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list)
-                    else attr_data.value_str
-                ),
-                cat[1]))),  # категория без порядкового номера
-            attrs_sorted)  # отсортированый перечень категорий
-        return mark_safe('<br>'.join(list(parameters_display)))
+        parameters_display = [
+            '<br>'.join(
+                [
+                    '%s-%s' % (
+                        attr_data.name,
+                        ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str
+                    )
+                    for attr_data in cat[1]
+                ])  # категория без порядкового номера
+            for cat in attrs_sorted]  # отсортированый перечень категорий
+        return mark_safe('<br>'.join(parameters_display))
 
     def get_shot_parameters_admin_field(self):
         return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
@@ -330,8 +334,8 @@ class ProductInCategory(models.Model):
                     'group_position': group_in_cat.position, 'attributes': {}}
                 for atr_group in group_in_cat.group.related_attributes.select_related('attribute').all():
                     atr_id = str(atr_group.attribute_id)
-                    if not '%s-%s' % (group_id, atr_id) in self.product.parameters.keys():
-                        self.product.parameters['%s-%s' % (group_id, atr_id)] = None
+                    if (full_id := f'{group_id}-{atr_id}') not in self.product.parameters.keys():
+                        self.product.parameters[full_id] = None
                     self.product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][
                         atr_id] = {'atr_position': atr_group.position}
         self.product.save()
@@ -396,17 +400,16 @@ class AttrGroup(models.Model):
         super().delete(*args, **kwargs)
 
     @property
-    def getlink(self):
+    def get_link(self):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
     def self_attributes_links(self):
-        ls = []
-        for i in self.related_attributes.all().order_by('position'):
-            link_atr = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(i.attribute.id,)),
-                                                  i.attribute.name)
-            ls.append(link_atr)
-        return mark_safe(', '.join(ls))
+        links = [
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute.id,)), i.attribute.name)
+            for i in self.related_attributes.all().order_by('position')
+        ]
+        return mark_safe(', '.join(links))
 
     self_attributes_links.short_description = 'Содержит атрибуты'
     self_attributes_links = property(self_attributes_links)
@@ -454,7 +457,7 @@ class Attribute(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def getlink(self):
+    def get_link(self):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
@@ -734,8 +737,6 @@ class AttributesInGroup(models.Model):
 
 class CategoryCollection(models.Model):
     category_list = TreeManyToManyField('Category', blank=True, default=None, verbose_name='Список категорий', )
-    # additional_id = models.CharField(max_length=128, blank=True, null=True, default=None, unique=True,
-    # verbose_name='Дополнительный id')
     is_active_custom_order_group = models.BooleanField(default=True,
                                                        verbose_name='Применить индивидуальный порядок групп атрибутов')
     is_active_custom_order_shot_parameters = models.BooleanField(default=True,
@@ -770,8 +771,13 @@ class CategoryCollection(models.Model):
             return ""
 
     def update_group_in_product(self):
-        Product.objects.filter(category_collection_id=self.id).update(custom_order_group=list(
-            map(lambda x: [x[0], x[1]], self.rel_group_iocog.order_by('position').values_list('category', 'group'))))
+        Product.objects.filter(category_collection_id=self.id).update(
+            custom_order_group=
+            [
+                [x[0], x[1]]
+                for x in self.rel_group_iocog.order_by('position').values_list('category', 'group')
+            ]
+        )
 
 
 class ItemOfCustomOrderGroup(models.Model):
@@ -797,7 +803,7 @@ class ItemOfCustomOrderGroup(models.Model):
     self_attributes_links.short_description = 'Содержит атрибуты'
 
     def getlink_group(self):
-        return self.group.getlink
+        return self.group.get_link
 
     getlink_group.short_description = 'Группа атрибутов'
     self_attributes_links = property(self_attributes_links)

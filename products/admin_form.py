@@ -189,10 +189,10 @@ class ProductForm(forms.ModelForm):
             # 'parameters_structure': JSONEditorWidget,
             'art': TextInput(attrs={'size': 10}),
             'name': TextInput(attrs={'size': 50}),
-            'lenght': NumberInput(attrs={'size': 2}),
+            'length': NumberInput(attrs={'size': 2}),
             'width': NumberInput(attrs={'size': 5}),
             'height': NumberInput(attrs={'size': 3}),
-            'lenght_box': NumberInput(attrs={'size': 5}),
+            'length_box': NumberInput(attrs={'size': 5}),
             'width_box': NumberInput(attrs={'size': 3}),
             'height_box': NumberInput(attrs={'size': 5}),
             'weight': NumberInput(attrs={'size': 5}),
@@ -212,8 +212,6 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
             list_of_sets_products = []
             coincidences_list = set()
             for form in self.forms:
-                # products = set(map(lambda x: str(x.product),form.cleaned_data[
-                # 'category'].related_products.select_related('product').all()))
                 products = Product.objects.filter(related_categories__category=form.cleaned_data['category'])
                 list_of_sets_products.append(products)
             i = 0
@@ -223,12 +221,13 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                     if j == i:
                         j += 1
                         continue
-                    # coincidences = query_1_of_products & query_2_of_products
                     coincidences = query_1_of_products.intersection(query_2_of_products)
                     if coincidences:
                         coincidences_list.update(coincidences)
                     j += 1
                 i += 1
+                if i == len(list_of_sets_products):
+                    break
             if coincidences_list:
                 raise ValidationError(
                     'Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать '

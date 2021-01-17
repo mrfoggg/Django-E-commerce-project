@@ -74,7 +74,7 @@ class CategoryInProductFormActions:
 
     @staticmethod
     def delete_attributes(product, category):
-        product.description += 'Удалена категория %s <br>' % category
+        product.description += f'Удалена категория {category} <br>'
         category_id = str(category.id)
         if category_id in product.shot_parameters_structure.keys():
             product.shot_parameters_structure.pop(category_id)
@@ -108,8 +108,7 @@ class CategoryInProductFormActions:
                      id=AttributesInGroup.objects.get(id=x.attribute).attribute_id,
                      value_str='не указано',
                      value=''
-                 )
-                 )
+                 ))
                 for x in attributes_query.values_list('position', 'attribute', 'name', named=True)])
             return attribute_structure
 
@@ -140,7 +139,6 @@ class CategoryInProductFormActions:
         # последовательно отбираем только те коллекции котрые содержат каждую из категор ия
         for cat in category_set:
             category_collection = category_collection.filter(category_list=cat).values_list('id')
-
         if category_collection.exists():
             category_collection_id = category_collection[0][0]
             custom_order_group = map(lambda x: [x.category_id, x.group_id], CategoryCollection.objects.get(

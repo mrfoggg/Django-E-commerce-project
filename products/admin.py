@@ -125,7 +125,7 @@ class MiniParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_adm
 
 class PricesOtherShopInline(nested_admin.NestedTabularInline):
     model = PricesOtherShop
-    fielfs = ('created', 'shop', 'price', 'updated', 'url', 'info')
+    fields = ('created', 'shop', 'price', 'updated', 'url', 'info')
     readonly_fields = ('created', 'updated',)
     extra = 0
     # sortable_field_name = "updated"
