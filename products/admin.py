@@ -235,7 +235,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
         }),
 
         ("Габбариты и вес",
-         {'fields': (('lenght', 'width', 'height',), ('lenght_box', 'width_box', 'height_box', 'weight')),
+         {'fields': (('length', 'width', 'height',), ('length_box', 'width_box', 'height_box', 'weight')),
           'classes': ('tab-fs-none',),
           }),
 

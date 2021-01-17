@@ -41,14 +41,19 @@ class CategoryInProductFormActions:
         self.forms = self.forms
 
     def group_duplicate_check(self):
+        categories = []
         list_of_query_groups = []
         coincidences_list = set()
         for form in self.forms:
             if self.can_delete and self._should_delete_form(form):
-                print(form.cleaned_data)
-            if not (self.can_delete and self._should_delete_form(form)):
-                groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
-                list_of_query_groups.append(groups)
+                continue
+            category = form.cleaned_data['category']
+            if category in categories:
+                raise ValidationError(f"Категория {category} дублируется")
+            categories.append(category)
+            groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
+            list_of_query_groups.append(groups)
+
         i = 0
         for query_1_groups in list_of_query_groups:
             j = 0
