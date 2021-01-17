@@ -1,9 +1,11 @@
-from mptt.admin import TreeRelatedFieldListFilter, DraggableMPTTAdmin
 import copy
+
+import nested_admin
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django_summernote.admin import SummernoteModelAdmin
-import nested_admin
+from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
+
 from .admin_form import *
 
 

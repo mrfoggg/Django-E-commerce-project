@@ -1,10 +1,12 @@
 from django.core.exceptions import ValidationError
-from django.utils.safestring import mark_safe
 from django.db.models import Count
-from .models import Category, AttrGroup, CategoryCollection, AttributesInGroup, Attribute, AttributeValue
+from django.utils.safestring import mark_safe
+
+from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue,
+                     Category, CategoryCollection)
 
 
-def update_addict_attr(prod, new_param):
+def update_addict_attr_values(prod, new_param):
     shot_atr_field = prod.shot_parameters_structure
     mini_atr_field = prod.mini_parameters_structure
 
@@ -31,10 +33,10 @@ def update_addict_attr(prod, new_param):
 
 
 class CategoryInProductFormActions:
-    """docstring for CategoryInProductFormActions"""
+    """mixin for CategoryForProductInLineFormSet"""
 
     def __init__(self):
-        self.instance = self.instance
+        # self.instance = self.instance
         self.can_delete = self.can_delete
         self.forms = self.forms
 
@@ -43,11 +45,10 @@ class CategoryInProductFormActions:
         coincidences_list = set()
         for form in self.forms:
             if self.can_delete and self._should_delete_form(form):
-                print('SHOULD_DELETE')
-                continue
-            print(form.cleaned_data['category'])
-            groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
-            list_of_query_groups.append(groups)
+                print(form.cleaned_data)
+            if not (self.can_delete and self._should_delete_form(form)):
+                groups = AttrGroup.objects.filter(related_categories__category=form.cleaned_data['category'])
+                list_of_query_groups.append(groups)
         i = 0
         for query_1_groups in list_of_query_groups:
             j = 0
@@ -60,18 +61,21 @@ class CategoryInProductFormActions:
                     coincidences_list.update(coincidences)
                 j += 1
             i += 1
+            if i == len(list_of_query_groups):
+                break
         if coincidences_list:
             raise ValidationError('Ошибка, в категориях дублируются группы атрибутов: "%s"' % mark_safe(
                 ', '.join(map(lambda x: x.name, coincidences_list))))
 
-    def delete_attributes(self, category):
-        self.instance.description += 'Удалена категория %s <br>' % category
+    @staticmethod
+    def delete_attributes(product, category):
+        product.description += 'Удалена категория %s <br>' % category
         category_id = str(category.id)
-        if category_id in self.instance.shot_parameters_structure.keys():
-            self.instance.shot_parameters_structure.pop(category_id)
-        if category_id in self.instance.mini_parameters_structure.keys():
-            self.instance.mini_parameters_structure.pop(category_id)
-        # if str(category.id) in self.instance.parameters_structure.keys():
+        if category_id in product.shot_parameters_structure.keys():
+            product.shot_parameters_structure.pop(category_id)
+        if category_id in product.mini_parameters_structure.keys():
+            product.mini_parameters_structure.pop(category_id)
+        # if str(category.id) in self.product.parameters_structure.keys():
         #     self.product.parameters_structure.pop(str(category.id))
         #
         # for group in AttrGroup.objects.filter(related_categories__category=category.id).only('id'):
@@ -81,58 +85,50 @@ class CategoryInProductFormActions:
         #         if '%s-%s' % (group_id, atr_id) in self.product.parameters:
         #             self.product.parameters.pop('%s-%s' % (group_id, atr_id))
 
-    def update_attributes(self, form_line):
-        # если категория добавлена
-        # отладочный фрагмент
-        if form_line.initial == {}:
-            self.instance.description += ('Добавлена категория "%s" <br>' % form_line.cleaned_data['category'])
+    @staticmethod
+    def add_attributes(product, category, position_category):
+        category_id = str(category.id)
+        product.description += f'Добавлена категория {category} <br>'
 
-            category = form_line.cleaned_data['category']
-            category_id = str(category.id)
+        def build_custom_attributes_structure_field_data(attributes_query):
+            attribute_structure = dict([
+                ('%s-%s' % (
+                    AttributesInGroup.objects.get(id=x.attribute).group_id,
+                    AttributesInGroup.objects.get(id=x.attribute).attribute_id
+                ),
+                 dict(
+                     pos_atr=x.position,
+                     name=x.name if x.name else AttributesInGroup.objects.get(id=x.attribute).attribute.name,
+                     # name=x.name if x.name not in [None, {}] else '',
+                     id=AttributesInGroup.objects.get(id=x.attribute).attribute_id,
+                     value_str='не указано',
+                     value=''
+                 )
+                 )
+                for x in attributes_query.values_list('position', 'attribute', 'name', named=True)])
+            return attribute_structure
 
-            def build_attribute_dict(attributes_query):
-                attributes = dict(list(map(
-                    lambda x:
-                    ('%s-%s' % (
-                        AttributesInGroup.objects.get(id=x.attribute).group_id,
-                        AttributesInGroup.objects.get(id=x.attribute).attribute_id),
-                     dict(pos_atr=x.position,
-                          name=x.name if x.name else AttributesInGroup.objects.get(id=x.attribute).attribute.name,
-                          # name=x.name if x.name not in [None, {}] else '',
-                          id=AttributesInGroup.objects.get(id=x.attribute).attribute_id,
-                          value_str='не указано',
-                          value=''
-                          )),
-                    attributes_query.values_list('position', 'attribute', 'name', named=True))))
-                return attributes
+        this_category_shot_attributes = category.related_shot_attributes.all()
+        if this_category_shot_attributes.exists():
+            product.shot_parameters_structure[category_id] = {
+                'cat_position': position_category, 'attributes':
+                    build_custom_attributes_structure_field_data(this_category_shot_attributes)}
 
-            # добавление кратких-характеристик
-            shot_attributes = category.related_shot_attributes.all()
-            if shot_attributes.exists():
-                self.instance.shot_parameters_structure[category_id] = {
-                    'cat_position': form_line.cleaned_data['position_category'], 'attributes':
-                        build_attribute_dict(shot_attributes)}
+        this_category_mini_attributes = category.related_mini_attributes.all()
+        if this_category_mini_attributes.exists():
+            product.mini_parameters_structure[category_id] = {
+                'cat_position': position_category, 'attributes':
+                    build_custom_attributes_structure_field_data(this_category_mini_attributes)}
 
-            # добавление мини-характеристик
-            mini_attributes = category.related_mini_attributes.all()
-            if mini_attributes.exists():
-                self.instance.mini_parameters_structure[category_id] = {
-                    'cat_position': form_line.cleaned_data['position_category'], 'attributes':
-                        build_attribute_dict(mini_attributes)}
+    @staticmethod
+    def reorder_attributes(product, category_id, new_category_order):
+        if (cat_id := str(category_id)) in product.shot_parameters_structure.keys():
+            product.shot_parameters_structure[cat_id]["cat_position"] = new_category_order
+        if cat_id in product.mini_parameters_structure.keys():
+            product.mini_parameters_structure[cat_id]["cat_position"] = new_category_order
 
-        # если категория изменена
-        elif 'category' in form_line.changed_data:
-            old_category = Category.objects.get(id=form_line.initial['category'])
-            new_category = form_line.cleaned_data['category']
-            self.instance.description += 'Категория "%s" изменена на "%s" <br>' % (
-                old_category, new_category)
-        # если только изменен порядок следования категорий
-        else:
-            self.instance.description += "Изменен порядок категории %s на %s <br>" % (
-                form_line.cleaned_data['category'], form_line.cleaned_data['position_category']
-            )
-
-    def add_category_collection(self, category_set):
+    @staticmethod
+    def add_category_collection(product, category_set):
         # выбираем коллекции нужной длины
         category_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
             cnt=len(category_set))
@@ -144,11 +140,11 @@ class CategoryInProductFormActions:
             category_collection_id = category_collection[0][0]
             custom_order_group = map(lambda x: [x.category_id, x.group_id], CategoryCollection.objects.get(
                 id=category_collection_id).rel_group_iocog.order_by('position'))
-            self.instance.category_collection_id = category_collection_id
-            self.instance.custom_order_group = list(custom_order_group)
+            product.category_collection_id = category_collection_id
+            product.custom_order_group = list(custom_order_group)
         else:
-            self.instance.category_collection_id = None
-            self.instance.custom_order_group = []
+            product.category_collection_id = None
+            product.custom_order_group = []
 
     def _should_delete_form(self, form):
         self._should_delete_form(form)

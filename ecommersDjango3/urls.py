@@ -1,7 +1,7 @@
 from baton.autodiscover import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import include, path
 
 admin.site.site_header = 'Интернет магазин "Снип-Сноп"'
 admin.site.site_title = "Снип-Сноп"
