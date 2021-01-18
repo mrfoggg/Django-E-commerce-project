@@ -375,9 +375,9 @@ class ProductInCategory(models.Model):
         self.create_attributes()
         # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
 
-    def delete(self, *args, **kwargs):
-        self.delete_attributes()
-        super().delete(*args, **kwargs)
+    # def delete(self, *args, **kwargs):
+    #     self.delete_attributes()
+    #     super().delete(*args, **kwargs)
 
 
 class AttrGroup(models.Model):

@@ -80,15 +80,14 @@ class CategoryInProductFormActions:
             product.shot_parameters_structure.pop(category_id)
         if category_id in product.mini_parameters_structure.keys():
             product.mini_parameters_structure.pop(category_id)
-        # if str(category.id) in self.product.parameters_structure.keys():
-        #     self.product.parameters_structure.pop(str(category.id))
-        #
-        # for group in AttrGroup.objects.filter(related_categories__category=category.id).only('id'):
-        #     group_id = str(group.id)
-        #     for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
-        #         atr_id = str(atr.id)
-        #         if '%s-%s' % (group_id, atr_id) in self.product.parameters:
-        #             self.product.parameters.pop('%s-%s' % (group_id, atr_id))
+        if str(category.id) in product.parameters_structure.keys():
+            product.parameters_structure.pop(str(category.id))
+        
+        for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
+            for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
+                atr_id = str(atr.id)
+                if (full_id := f'{group_id}-{atr_id}') in product.parameters:
+                    product.parameters.pop(full_id)
 
     @staticmethod
     def add_attributes(product, category, position_category):
