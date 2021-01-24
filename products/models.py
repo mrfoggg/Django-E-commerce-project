@@ -90,7 +90,7 @@ class Product(models.Model):
                            verbose_name='Артикул товара')
     made_in = models.ForeignKey('Country', blank=True, null=True, default=None, on_delete=models.SET_NULL,
                                 verbose_name='Страна производства')
-    brand = models.ForeignKey('Brand', blank=True, null=True, default=None, on_delete=models.CASCADE,
+    brand = models.ForeignKey('Brand', blank=True, null=True, default=None, on_delete=models.SET_NULL,
                               verbose_name='Торговая марка')
     description = models.TextField(blank=True, null=True, default=None, verbose_name='Описание товара')
     rating = models.SmallIntegerField(choices=RATING, default=1, db_index=True)
@@ -136,31 +136,9 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-    def get_category_collection_link(self):
-        if self.category_collection_id:
-            return mark_safe("<a href=%s>%s</a>" % (
-                reverse('admin:products_categorycollection_change', args=(self.category_collection_id,)),
-                self.category_collection))
-        else:
-            return "Не назначена"
-
-    get_category_collection_link.short_description = 'Коллекия категорий'
-    get_category_collection_link = property(get_category_collection_link)
-
-    def get_product_category_link(self):
-        categories_link_list = []
-        for cat in Category.objects.filter(related_products__product=self):
-            category_link = "<a href={}>{}</a>".format(reverse('admin:products_category_change', args=(cat.id,)),
-                                                       cat.name)
-            categories_link_list.append(category_link)
-        return mark_safe(', '.join(categories_link_list))
-
-    get_product_category_link.short_description = 'Дополнительные категории'
-    get_product_category_link = property(get_product_category_link)
-
     @property
     def get_link_refresh(self):
-        return "<a href=%s>%s</a>" % (reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
+        return f"<a href={reverse('admin:products_product_change', args=(self.id,))}>'Обновить'</a>" 
 
     @staticmethod
     def get_sorted_addict_attr(attr_field):
@@ -195,32 +173,6 @@ class Product(models.Model):
     @property
     def sorted_mini_attributes(self):
         return self.get_sorted_addict_attr(self.mini_parameters_structure)
-
-    @staticmethod
-    def reformat_addict_attr_for_admin(attrs_sorted):
-        parameters_display = [
-            '<br>'.join(
-                [
-                    '%s-%s' % (
-                        attr_data.name,
-                        ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str
-                    )
-                    for attr_data in cat[1]
-                ])  # категория без порядкового номера
-            for cat in attrs_sorted]  # отсортированый перечень категорий
-        return mark_safe('<br>'.join(parameters_display))
-
-    def get_shot_parameters_admin_field(self):
-        return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
-
-    get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
-    get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
-
-    def get_mini_parameters_admin_field(self):
-        return self.reformat_addict_attr_for_admin(self.sorted_mini_attributes)
-
-    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
-    get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)
 
 
 class ProductImage(models.Model):
@@ -296,11 +248,11 @@ class ProductInCategory(models.Model):
         category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
         return f'"{category}" - {name}'
 
-    def get_product_category_link(self):
-        return self.product.get_product_category_link
+    def links_to_product_categories(self):
+        return self.product.links_to_product_categories
 
-    get_product_category_link.short_description = 'Дополнительные категории'
-    get_product_category_link = property(get_product_category_link)
+    links_to_product_categories.short_description = 'Дополнительные категории'
+    links_to_product_categories = property(links_to_product_categories)
 
     def self_attribute_group(self):
         return self.category.self_attribute_group
@@ -458,16 +410,15 @@ class Attribute(models.Model):
 
     @property
     def get_link(self):
-        link = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(self.id,)), self.name)
+        link = f"<a href={reverse('admin:products_attribute_change', args=(self.id,))}>{self.name}</a>"
         return mark_safe(link)
 
     def self_value_variants(self):
-        values = self.value_list.all()
-        ls = []
-        for i in values:
-            link_val = "<a href={}>{}</a>".format(reverse('admin:products_attributevalue_change', args=(i.id,)), i)
-            ls.append(link_val)
-        return mark_safe(', '.join(ls))
+        variants_list = [
+            f"<a href={reverse('admin:products_attributevalue_change', args=(val.id,))}>{val}</a>"
+            for val in self.value_list.all()
+        ]
+        return mark_safe(', '.join(variants_list))
 
     self_value_variants.short_description = 'Список значений '
     self_value_variants = property(self_value_variants)

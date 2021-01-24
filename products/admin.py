@@ -7,6 +7,7 @@ from django_summernote.admin import SummernoteModelAdmin
 from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
 
 from .admin_form import *
+from .services import reformat_addict_attr_for_admin
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -34,8 +35,8 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
 
 
 class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    fields = ('position_product', 'product', 'get_product_category_link')
-    readonly_fields = ('product', 'get_product_category_link')
+    fields = ('position_product', 'product', 'links_to_product_categories')
+    readonly_fields = ('product', 'links_to_product_categories')
     model = ProductInCategory
     sortable_field_name = "position_product"
     ordering = ('position_product',)
@@ -209,7 +210,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     form = ProductForm
     model = Product
     summernote_fields = ('description',)
-    list_display = ('art', 'name', 'rating', 'get_product_category_link', 'is_active')
+    list_display = ('art', 'name', 'rating', 'links_to_product_categories', 'is_active')
     list_display_links = ('name',)
     list_editable = ("rating", 'is_active',)
     prepopulated_fields = {"slug": ("name",)}
@@ -263,6 +264,37 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 ProductImage.objects.create(product=product_copy, image=ph.image)
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
+
+    def get_category_collection_link(self, obj):
+        if obj.category_collection_id:
+            return mark_safe("<a href=%s>%s</a>" % (
+                reverse('admin:products_categorycollection_change', args=(obj.category_collection_id,)),
+                obj.category_collection))
+        else:
+            return "Не назначена"
+
+    get_category_collection_link.short_description = 'Коллекия категорий'
+
+    def links_to_product_categories(self, obj):
+        categories_link_list = [
+            f"<a href={reverse('admin:products_category_change', args=(cat.id,))}>{cat.name}</a>"
+            for cat in Category.objects.filter(related_products__product=obj)
+        ]
+        return mark_safe(', '.join(categories_link_list))
+
+    links_to_product_categories.short_description = 'Дополнительные категории'
+
+    def get_shot_parameters_admin_field(self, obj):
+        return reformat_addict_attr_for_admin(obj.sorted_shot_attributes)
+
+    get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
+
+    def get_mini_parameters_admin_field(self, obj):
+        return reformat_addict_attr_for_admin(obj.sorted_mini_attributes)
+
+    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
+
+
 
 
 @admin.register(Country)

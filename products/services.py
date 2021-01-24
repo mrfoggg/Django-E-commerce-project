@@ -13,6 +13,20 @@ def get_and_save_product_pos_in_cat(form, position):
     print(f'product_position: {product_in_cat_item.position_product}')
 
 
+def reformat_addict_attr_for_admin(attrs_sorted):
+    parameters_display = [
+        '<br>'.join(
+            [
+                '%s-%s' % (
+                    attr_data.name,
+                    ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str
+                )
+                for attr_data in cat[1]
+            ])  # категория без порядкового номера
+        for cat in attrs_sorted]  # отсортированый перечень категорий
+    return mark_safe('<br>'.join(parameters_display))
+
+
 def update_addict_attr_values(prod, new_param):
     shot_atr_field = prod.shot_parameters_structure
     mini_atr_field = prod.mini_parameters_structure
