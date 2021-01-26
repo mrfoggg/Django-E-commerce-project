@@ -311,7 +311,7 @@ class ProductInCategory(models.Model):
     # def clean(self):
     #     # optimized version
     #     groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id)
-    #     categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category', flat=True)
+    #   categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category', flat=True)
     #     other_groups_allredy_in_product = AttrGroup.objects.filter(
     #         related_categories__category__id__in=categories_this_product)
     #     common_groups = groups_in_this_category.intersection(other_groups_allredy_in_product)
@@ -339,7 +339,6 @@ class ProductInCategory(models.Model):
     #                 self.product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][
     #                     atr_id] = {'atr_position': atr_group.position}
     #     self.product.save()
-        # добавить соответствующую коллекцию категорий - сделано в BaseInlineFormSet
 
     def delete_attributes(self):
         category_id = str(self.category_id)
@@ -565,7 +564,7 @@ class AttrGroupInCategory(models.Model):
         for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure',
                                                                                                'parameters'):
             if category_id in product.parameters_structure and group_id in product.parameters_structure[category_id][
-                'groups_attributes']:
+                                                                                            'groups_attributes']:
                 product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
             if not product.parameters_structure[category_id]['groups_attributes']:
                 product.parameters_structure.pop(category_id)
@@ -772,8 +771,7 @@ class CategoryCollection(models.Model):
 
     def update_group_in_product(self):
         Product.objects.filter(category_collection_id=self.id).update(
-            custom_order_group=
-            [
+            custom_order_group=[
                 [x[0], x[1]]
                 for x in self.rel_group_iocog.order_by('position').values_list('category', 'group')
             ]
