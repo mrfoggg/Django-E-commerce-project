@@ -3,7 +3,7 @@ from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
 
 from .models import *
-from .services import CategoryInProductFormActions, update_addict_attr_values
+from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -242,7 +242,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
         if self.has_changed():
             total_form_count = self.total_form_count()
             total_deleted_forms = len(self.deleted_forms)
-            not_should_delete_forms_more_than_one = True if (total_form_count - total_deleted_forms) > 1 else False
+            not_should_delete_forms_more_than_one = total_form_count - total_deleted_forms > 1
             if not_should_delete_forms_more_than_one:
                 self.group_duplicate_check()
             new_category_set = set()
@@ -252,29 +252,35 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                     self.delete_attributes(self.instance, form.cleaned_data['category'])
                     category_set_changed = True
                     continue
-                elif form.has_changed():
-                    if form.initial == {}:
-                        self.add_attributes(self.instance, form.cleaned_data["category"],
-                                            form.cleaned_data["position_category"])
-                    else:
-                        if 'category' in form.changed_data:
-                            print(f'категория {form.initial["category"]} изменена на {form.cleaned_data["category"]}')
-                            self.delete_attributes(self.instance, Category.objects.get(id=form.initial["category"]))
-                            self.add_attributes(self.instance, form.cleaned_data["category"],
-                                                form.cleaned_data["position_category"])
-                            category_set_changed = True
-                        else:
-                            self.reorder_attributes(self.instance, form.initial["category"],
-                                                    form.cleaned_data["position_category"])
-
+                else:
                     if not_should_delete_forms_more_than_one:
                         new_category_set.add(form.cleaned_data['category'].id)
+                    if form.has_changed():
+                        if form.initial == {}:
+                            product_position = self.add_attributes(
+                                self.instance, form.cleaned_data["category"], form.cleaned_data["position_category"])
+                            get_and_save_product_pos_in_cat(form, product_position)
+                            category_set_changed = True
 
-            if not not_should_delete_forms_more_than_one:
+                        else:
+                            if 'category' in form.changed_data:
+                                print(f'категория {form.initial["category"]} изменена на {form.cleaned_data["category"].id}')
+                                self.delete_attributes(self.instance, Category.objects.get(id=form.initial["category"]))
+                                product_position = self.add_attributes(
+                                    self.instance, form.cleaned_data["category"],
+                                    form.cleaned_data["position_category"])
+                                category_set_changed = True
+                                get_and_save_product_pos_in_cat(form, product_position)
+                            else:
+                                self.reorder_attributes(self.instance, form.initial["category"],
+                                                        form.cleaned_data["position_category"])
+
+            if not not_should_delete_forms_more_than_one and total_form_count > 1:
+                print('delete CC')
                 self.instance.category_collection_id = None
                 self.instance.custom_order_group = []
             else:
-                if not self.instance.id or category_set_changed:
+                if (not self.instance.id or category_set_changed) and not_should_delete_forms_more_than_one:
                     self.add_category_collection(self.instance, new_category_set)
 
 
@@ -300,17 +306,17 @@ class CategoryCollectionForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         cat_list = cleaned_data['category_list']
-        cat_list_id_list = list(map(lambda x: x[0], cat_list.order_by('mptt_level').values_list('id')))
-
+        if (len_cat_list := len(cat_list)) < 2:
+            raise forms.ValidationError('Коллекция не может состоять менее чем из двух групп')
+        cat_list_id_list = cat_list.order_by('mptt_level').values_list('id', flat=True)
         other_same_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
-            cnt=cat_list.count())
+            cnt=len_cat_list)
+
         for cat_id in cat_list_id_list:
             other_same_collection = other_same_collection.filter(category_list__id=cat_id)
 
         if other_same_collection.exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Такой набор категорий уже определен')
-        if len(cat_list) < 2:
-            raise forms.ValidationError('Коллекция не может состоять менее чем из двух групп')
 
         if self.instance.id:
             for cat_id in cat_list_id_list:
@@ -325,13 +331,13 @@ class CategoryCollectionForm(forms.ModelForm):
                         )
                 ItemOfCustomOrderGroup.objects.bulk_create(list_for_create_items)
             new_set = set(cat_list_id_list)
-            old_set = set(map(lambda x: x[0], Category.objects.filter().values_list('id')))
+            old_set = set(Category.objects.filter().values_list('id', flat=True))
             if old_set != new_set:
                 Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
                                                                                        custom_order_group=[])
 
         products_add = Product.objects.exclude(category_collection_id=self.instance.id).annotate(
-            cnt=Count('related_categories')).filter(cnt=cat_list.count())
+            cnt=Count('related_categories')).filter(cnt=len_cat_list)
         for cat_id in cat_list_id_list:
             products_add = products_add.filter(related_categories__category_id=cat_id)
         products_add.update(category_collection_id=self.instance.id)
@@ -343,16 +349,14 @@ class CategoryCollectionForm(forms.ModelForm):
 
 
 class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
-
     def clean(self):
         super().clean()
-        custom_order_list = []
-        for form in self.forms:
-            custom_order_item = [form.cleaned_data['position'], form.cleaned_data['id'].category_id,
-                                 form.cleaned_data['id'].group_id]
-            custom_order_list.append(custom_order_item)
+        custom_order_list = [
+            [form.cleaned_data['position'], form.cleaned_data['id'].category_id, form.cleaned_data['id'].group_id]
+            for form in self.forms
+        ]
         custom_order_list.sort()
-        group_list = list(map(lambda x: x[1:], custom_order_list))
+        group_list = [x[1:] for x in custom_order_list]
         if self.instance.is_active_custom_order_group:
             Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
         else:

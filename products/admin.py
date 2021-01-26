@@ -34,7 +34,6 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
 
 
 class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    # class ProductInCategoryInLine(GrappelliSortableHiddenMixin, admin.StackedInline):
     fields = ('position_product', 'product', 'get_product_category_link')
     readonly_fields = ('product', 'get_product_category_link')
     model = ProductInCategory
@@ -45,11 +44,6 @@ class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.Nes
     verbose_name_plural = 'Порядок товаров в категории'
     verbose_name = 'Товар'
     can_delete = False
-
-    # def has_add_permission(self, request, obj=None):
-    #     return False
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
 
 
 class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -222,7 +216,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     readonly_fields = (
         'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters_admin_field',
         'get_mini_parameters_admin_field')
-    list_filter = (('admin_category', TreeRelatedFieldListFilter),)
+    list_filter = (('admin_category', TreeRelatedFieldListFilter), 'brand')
     inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
     change_form_template = "products/product_changeform.html"
     fieldsets = (

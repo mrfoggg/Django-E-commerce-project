@@ -1,9 +1,16 @@
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils.safestring import mark_safe
 
-from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue,
-                     Category, CategoryCollection)
+from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, ProductInCategory)
+
+
+def get_and_save_product_pos_in_cat(form, position):
+    product_in_cat_item = form.save(commit=False)
+    product_in_cat_item.position_product = position
+    product_in_cat_item.save()
+    print(f'product_id: {product_in_cat_item.id}')
+    print(f'product_position: {product_in_cat_item.position_product}')
 
 
 def update_addict_attr_values(prod, new_param):
@@ -45,6 +52,8 @@ class CategoryInProductFormActions:
         list_of_query_groups = []
         coincidences_list = set()
         for form in self.forms:
+            if 'category' not in form.cleaned_data:
+                raise ValidationError('Вы пытаетесь добавить несуществующую категорию')
             if self.can_delete and self._should_delete_form(form):
                 continue
             category = form.cleaned_data['category']
@@ -82,7 +91,7 @@ class CategoryInProductFormActions:
             product.mini_parameters_structure.pop(category_id)
         if str(category.id) in product.parameters_structure.keys():
             product.parameters_structure.pop(str(category.id))
-        
+
         for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)
@@ -93,6 +102,22 @@ class CategoryInProductFormActions:
     def add_attributes(product, category, position_category):
         category_id = str(category.id)
         product.description += f'Добавлена категория {category} <br>'
+
+        product_in_cat_qs = ProductInCategory.objects.filter(category_id=category_id).aggregate(
+            Max('position_product'))
+
+        if category.related_groups.filter(group__related_attributes__isnull=False):
+            product.parameters_structure |= {category_id: {'cat_position': position_category, 'groups_attributes': {}}}
+            for group_in_cat in category.related_groups.filter(group__related_attributes__isnull=False).select_related(
+                    'group'):
+                group_id = str(group_in_cat.group_id)
+                product.parameters_structure[category_id]['groups_attributes'] |= {
+                    group_id: {'group_position': group_in_cat.position, 'attributes': {}}}
+                for atr_group in group_in_cat.group.related_attributes.select_related('attribute').all():
+                    product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'] |= {
+                        (attr_id := str(atr_group.attribute_id)): {'atr_position': atr_group.position}
+                    }
+                    product.parameters |= {f'{group_id}-{attr_id}': None}
 
         def build_custom_attributes_structure_field_data(attributes_query):
             attribute_structure = dict([
@@ -122,9 +147,12 @@ class CategoryInProductFormActions:
             product.mini_parameters_structure[category_id] = {
                 'cat_position': position_category, 'attributes':
                     build_custom_attributes_structure_field_data(this_category_mini_attributes)}
+        next_position = 0 if (max_pos := product_in_cat_qs['position_product__max']) is None else max_pos + 1
+        return next_position
 
     @staticmethod
     def reorder_attributes(product, category_id, new_category_order):
+        print('RUN reorder')
         if (cat_id := str(category_id)) in product.shot_parameters_structure.keys():
             product.shot_parameters_structure[cat_id]["cat_position"] = new_category_order
         if cat_id in product.mini_parameters_structure.keys():
@@ -132,18 +160,18 @@ class CategoryInProductFormActions:
 
     @staticmethod
     def add_category_collection(product, category_set):
+        print(f'RUN add_category_collection with category_set: {category_set}')
         # выбираем коллекции нужной длины
         category_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
             cnt=len(category_set))
-        # последовательно отбираем только те коллекции котрые содержат каждую из категор ия
+        # последовательно отбираем только те коллекции которые содержат каждую из категорий размещения
         for cat in category_set:
-            category_collection = category_collection.filter(category_list=cat).values_list('id')
+            category_collection = category_collection.filter(category_list=cat).values_list('id', flat=True)
         if category_collection.exists():
-            category_collection_id = category_collection[0][0]
-            custom_order_group = map(lambda x: [x.category_id, x.group_id], CategoryCollection.objects.get(
-                id=category_collection_id).rel_group_iocog.order_by('position'))
+            category_collection_id = category_collection[0]
+            product.custom_order_group = [[gr.category_id, gr.group_id] for gr in CategoryCollection.objects.get(
+                id=category_collection_id).rel_group_iocog.order_by('position')]
             product.category_collection_id = category_collection_id
-            product.custom_order_group = list(custom_order_group)
         else:
             product.category_collection_id = None
             product.custom_order_group = []
