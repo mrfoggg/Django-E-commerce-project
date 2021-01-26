@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'pytils',
     'django_json_widget',
     'pysnooper',
-    # 'debug_toolbar',
+    'debug_toolbar',
     'home',
     'products.apps.ProductsAppConfig',
     'baton.autodiscover',
@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
