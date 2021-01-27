@@ -93,8 +93,7 @@ class CategoryInProductFormActions:
             product.parameters_structure.pop(str(category.id))
 
         for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
-            for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
-                atr_id = str(atr.id)
+            for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
                 if (full_id := f'{group_id}-{atr_id}') in product.parameters:
                     product.parameters.pop(full_id)
 

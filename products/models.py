@@ -308,37 +308,6 @@ class ProductInCategory(models.Model):
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
-    # def clean(self):
-    #     # optimized version
-    #     groups_in_this_category = AttrGroup.objects.filter(related_categories__category=self.category_id)
-    #   categories_this_product = self.product.related_categories.exclude(id=self.id).values_list('category', flat=True)
-    #     other_groups_allredy_in_product = AttrGroup.objects.filter(
-    #         related_categories__category__id__in=categories_this_product)
-    #     common_groups = groups_in_this_category.intersection(other_groups_allredy_in_product)
-    #     if common_groups.exists():
-    #         common_groups_names = common_groups.values_list('name', flat=True)
-    #         raise ValidationError(
-    #             'Новое значение содержит категорию или товар с дублирующейся группой атрибутов: "%s"' % ', '.join(
-    #                 common_groups_names)
-    #         )
-
-    # def create_attributes(self):
-    #     if self.category.related_groups.filter(group__related_attributes__isnull=False):
-    #         category_id = str(self.category_id)
-    #         self.product.parameters_structure[category_id] = {'cat_position': self.position_category,
-    #                                                           'groups_attributes': {}}
-    #         for group_in_cat in self.category.related_groups.filter(
-    #                 group__related_attributes__isnull=False).select_related('group'):
-    #             group_id = str(group_in_cat.group_id)
-    #             self.product.parameters_structure[category_id]['groups_attributes'][group_id] = {
-    #                 'group_position': group_in_cat.position, 'attributes': {}}
-    #             for atr_group in group_in_cat.group.related_attributes.select_related('attribute').all():
-    #                 atr_id = str(atr_group.attribute_id)
-    #                 if (full_id := f'{group_id}-{atr_id}') not in self.product.parameters.keys():
-    #                     self.product.parameters[full_id] = None
-    #                 self.product.parameters_structure[category_id]['groups_attributes'][group_id]['attributes'][
-    #                     atr_id] = {'atr_position': atr_group.position}
-    #     self.product.save()
 
     def delete_attributes(self):
         category_id = str(self.category_id)
@@ -351,32 +320,6 @@ class ProductInCategory(models.Model):
                 if (full_id := f'{group_id}-{atr_id}') in self.product.parameters:
                     self.product.parameters.pop(full_id)
         self.product.save()
-        # сделать удаление коллекции категорий из товара - сделано в BaseInlineFormSet
-
-    # def save(self, *args, **kwargs):
-    #     self.product.refresh_from_db()
-    #     max_product_position = ProductInCategory.objects.filter(category_id=self.category_id).aggregate(
-    #         Max('position_product'))
-    #     if not self.id or self.category_id != self.old_category:
-    #         # if 0:
-    #         if max_product_position['position_product__max'] is not None:
-    #             self.position_product = max_product_position['position_product__max'] + 1
-    #         else:
-    #             self.position_product = 0
-    #     if self.old_category is not None and self.old_category != self.category_id:
-    #         old_category_id = str(self.old_category)
-    #         if old_category_id in self.product.parameters_structure.keys():
-    #             self.product.parameters_structure.pop(old_category_id)
-    #         for group in AttrGroup.objects.filter(related_categories__category=self.old_category).values('id'):
-    #             for atr in Attribute.objects.filter(related_groups__group=group['id']).values('id'):
-    #                 self.product.parameters.pop(f"{group['id']}-{atr['id']}")
-    #     super().save(*args, **kwargs)
-    #     self.create_attributes()
-        # сделать удаление коллекции категорий и добавление новой - сделано в BaseInlineFormSet
-
-    # def delete(self, *args, **kwargs):
-    #     self.delete_attributes()
-    #     super().delete(*args, **kwargs)
 
 
 class AttrGroup(models.Model):
