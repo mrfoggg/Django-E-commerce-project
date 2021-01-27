@@ -264,7 +264,8 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                print(f'категория {form.initial["category"]} изменена на {form.cleaned_data["category"].id}')
+                                print(
+                                    f'категория {form.initial["category"]} изменена на {form.cleaned_data["category"].id}')
                                 self.delete_attributes(self.instance, Category.objects.get(id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
@@ -322,13 +323,10 @@ class CategoryCollectionForm(forms.ModelForm):
             for cat_id in cat_list_id_list:
                 list_for_create_items = []
                 for group in AttrGroup.objects.filter(related_categories__category__id=cat_id).only('id'):
-                    if not ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
-                                                                 category_collection_id=self.instance.id,
-                                                                 category_id=cat_id).exists():
-                        list_for_create_items.append(
-                            ItemOfCustomOrderGroup(group_id=group.id, category_collection_id=self.instance.id,
-                                                   category_id=cat_id)
-                        )
+                    if not (iocog := ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
+                                                                           category_collection_id=self.instance.id,
+                                                                           category_id=cat_id)).exists():
+                        list_for_create_items.append(iocog)
                 ItemOfCustomOrderGroup.objects.bulk_create(list_for_create_items)
             new_set = set(cat_list_id_list)
             old_set = set(Category.objects.filter().values_list('id', flat=True))

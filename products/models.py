@@ -46,9 +46,7 @@ class Category(MPTTModel):
         order_insertion_by = ['name']
 
     def self_attribute_group(self):
-        group_links = ["<a href=%s>%s</a>" % (reverse('admin:products_attrgroup_change', args=(i.group_id,)), i.group)
-                       for i in self.related_groups.all()]
-        return mark_safe(', '.join(group_links))
+        return mark_safe(', '.join(AttrGroup.objects.filter(related_categories__category__id=self.id).values_list('name', flat=True)))
 
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
@@ -148,11 +146,10 @@ class Product(models.Model):
     get_category_collection_link = property(get_category_collection_link)
 
     def get_product_category_link(self):
-        categories_link_list = []
-        for cat in Category.objects.filter(related_products__product=self):
-            category_link = "<a href={}>{}</a>".format(reverse('admin:products_category_change', args=(cat.id,)),
-                                                       cat.name)
-            categories_link_list.append(category_link)
+        categories_link_list = [
+            f"<a href={reverse('admin:products_category_change', args=(cat[0],))}>{cat[1]}</a>"
+            for cat in Category.objects.filter(related_products__product=self).values_list('id', 'name')
+        ]
         return mark_safe(', '.join(categories_link_list))
 
     get_product_category_link.short_description = 'Дополнительные категории'
@@ -308,13 +305,12 @@ class ProductInCategory(models.Model):
     self_attribute_group.short_description = 'Группы атрибутов'
     self_attribute_group = property(self_attribute_group)
 
-
     def delete_attributes(self):
         category_id = str(self.category_id)
         if category_id in self.product.parameters_structure.keys():
             self.product.parameters_structure.pop(category_id)
-        for group in AttrGroup.objects.filter(related_categories__category=self.category_id).only('id'):
-            group_id = str(group.id)
+        for group in AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id', flat=True):
+            group_id = str(group)
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)
                 if (full_id := f'{group_id}-{atr_id}') in self.product.parameters:
@@ -348,7 +344,7 @@ class AttrGroup(models.Model):
 
     def self_attributes_links(self):
         links = [
-            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute.id,)), i.attribute.name)
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute_id,)), i.attribute.name)
             for i in self.related_attributes.all().order_by('position')
         ]
         return mark_safe(', '.join(links))
@@ -404,11 +400,10 @@ class Attribute(models.Model):
         return mark_safe(link)
 
     def self_value_variants(self):
-        values = self.value_list.all()
-        ls = []
-        for i in values:
-            link_val = "<a href={}>{}</a>".format(reverse('admin:products_attributevalue_change', args=(i.id,)), i)
-            ls.append(link_val)
+        ls = [
+            f"<a href={reverse('admin:products_attributevalue_change', args=(i.id,))}>{i}</a>"
+            for i in self.value_list.all()
+        ]
         return mark_safe(', '.join(ls))
 
     self_value_variants.short_description = 'Список значений '
@@ -507,7 +502,7 @@ class AttrGroupInCategory(models.Model):
         for product in Product.objects.filter(related_categories__category=self.category).only('parameters_structure',
                                                                                                'parameters'):
             if category_id in product.parameters_structure and group_id in product.parameters_structure[category_id][
-                                                                                            'groups_attributes']:
+                'groups_attributes']:
                 product.parameters_structure[category_id]['groups_attributes'].pop(group_id)
             if not product.parameters_structure[category_id]['groups_attributes']:
                 product.parameters_structure.pop(category_id)

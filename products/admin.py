@@ -1,12 +1,14 @@
 import copy
 
 import nested_admin
+from django.db.models import Subquery, OuterRef, JSONField
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django_summernote.admin import SummernoteModelAdmin
 from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
 
 from .admin_form import *
+from django.contrib.postgres.aggregates import ArrayAgg
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -188,6 +190,14 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
     @staticmethod
     def sign_view(obj):
         return mark_safe('<img src="{url}" width=40 height=40/>'.format(url=obj.sign.url))
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(s_attribute_group=ArrayAgg('related_groups__group__name'))
+
+    @staticmethod
+    def self_attribute_group(obj):
+        return obj.s_attribute_group
 
 
 def save_and_make_copy(objct, model_to_copy):
