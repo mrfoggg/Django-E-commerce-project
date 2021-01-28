@@ -192,18 +192,30 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
     def sign_view(obj):
         return mark_safe('<img src="{url}" width=40 height=40/>'.format(url=obj.sign.url))
 
+    # def get_queryset(self, request):
+    #     queryset = super().get_queryset(request)
+    #     return queryset.annotate(
+    #         s_attribute_group_names_list=ArrayAgg('related_groups__group__name'),
+    #         s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),
+    #         )
+    #
+    # @staticmethod
+    # def self_attribute_groups(obj):
+    #     group_links_list = [
+    #         "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
+    #         for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
+    #     ]
+    #     return mark_safe(', '.join(group_links_list))
+
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.annotate(
-            s_attribute_group_names_list=ArrayAgg('related_groups__group__name'),
-            s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),
-            )
+        return queryset.prefetch_related('related_groups',)
 
     @staticmethod
     def self_attribute_groups(obj):
         group_links_list = [
-            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
-            for group_id, group_name in zip(obj.s_attribute_group_names_list, obj.s_attribute_group_id_list)
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group[0]},)), group[1])
+            for group in obj.related_groups.values_list('group_id', 'group__name')
         ]
         return mark_safe(', '.join(group_links_list))
 
