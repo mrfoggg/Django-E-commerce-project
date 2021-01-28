@@ -26,13 +26,28 @@ class BrandInLine(admin.TabularInline):
 
 class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     formset = CategoryForProductInLineFormSet
-    fields = ('position_category', 'category', 'self_attribute_group')
-    readonly_fields = ('self_attribute_group',)
+    fields = ('position_category', 'category', 'self_attribute_groups')
+    readonly_fields = ('self_attribute_groups',)
     model = ProductInCategory
     sortable_field_name = 'position_category'
     ordering = ('position_category',)
     # classes = ['collapse']
     extra = 0
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            s_attribute_group_names_list=ArrayAgg('category__related_groups__group__name'),
+            s_attribute_group_id_list=ArrayAgg('category__related_groups__group__id'),
+            )
+
+    @staticmethod
+    def self_attribute_groups(obj):
+        group_links_list = [
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
+            for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
+        ]
+        return mark_safe(', '.join(group_links_list))
 
 
 class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -203,7 +218,7 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
     def self_attribute_groups(obj):
         group_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
-            for group_id, group_name in zip(obj.s_attribute_group_names_list, obj.s_attribute_group_id_list)
+            for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
         ]
         return mark_safe(', '.join(group_links_list))
 
