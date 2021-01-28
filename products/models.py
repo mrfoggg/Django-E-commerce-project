@@ -45,11 +45,16 @@ class Category(MPTTModel):
         level_attr = 'mptt_level'
         order_insertion_by = ['name']
 
-    def self_attribute_group(self):
-        return mark_safe(', '.join(AttrGroup.objects.filter(related_categories__category__id=self.id).values_list('name', flat=True)))
+    # def self_attribute_groups(self):
+    #     return mark_safe(', '.join(AttrGroup.objects.filter(related_categories__category__id=self.id).values_list('name', flat=True)))
 
-    self_attribute_group.short_description = 'Группы атрибутов'
-    self_attribute_group = property(self_attribute_group)
+    # def self_attribute_groups(self):
+    #     group_links = ["<a href=%s>%s</a>" % (reverse('admin:products_attrgroup_change', args=(i.group_id,)), i.group)
+    #                    for i in self.related_groups.all()]
+    #     return mark_safe(', '.join(group_links))
+    #
+    # self_attribute_groups.short_description = 'Группы атрибутов'
+    # self_attribute_groups = property(self_attribute_groups)
 
     @property
     def getlink(self):
@@ -450,6 +455,7 @@ class AttrGroupInCategory(models.Model):
 
     def __str__(self):
         return self.group.name
+        # return AttrGroup.objects.values_list('name', flat=True).get(id=self.group_id)
 
     def clean(self):
         # ищем товары для которых в их других категриях уже есть эта группа атрибутов
