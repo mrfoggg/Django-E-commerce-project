@@ -9,22 +9,22 @@ from .services import CategoryInProductFormActions, get_and_save_product_pos_in_
 class ProductAttributesWidget(forms.MultiWidget):
     template_name = "products/product_attribute_widget.html"
 
-    def __init__(self, widgets=[], keys_atr=None):
+    def __init__(self, widgets=None, keys_atr=None):
         self.keys = keys_atr
         super(ProductAttributesWidget, self).__init__(widgets)
 
     def decompress(self, value):
-        return list(map(lambda x: value[x], self.keys)) if value else {}
+        return [value[x] for x in self.keys] if value else {}
 
 
 class ProductAttributesField(forms.MultiValueField):
-    def __init__(self, instance, *args, **kwargs):
+    def __init__(self, instance, **kwargs):
         list_fields = []
         list_widgets = []
         self.list_keys_attribute = []
 
         if instance:
-            self.list_group_labels = []
+            # self.list_group_labels = []
 
             if instance.custom_order_group != [] and instance.is_active_custom_order_group:
                 mode = 'custom'
@@ -40,10 +40,8 @@ class ProductAttributesField(forms.MultiValueField):
             custom_order_group = instance.custom_order_group
 
             def get_attribute_id(attr_it):
-                sorted_list_of_attribute_id_with_position = sorted(
-                    map(lambda x: [x[1]['atr_position'], x[0]], attr_it))
-                srtd_list_of_attribute_id = map(lambda x: int(x[1]), sorted_list_of_attribute_id_with_position)
-                return list(srtd_list_of_attribute_id)
+                sorted_list_of_attribute_id_with_position = sorted([[x[1]['atr_position'], x[0]] for x in attr_it])
+                return [int(x[1]) for x in sorted_list_of_attribute_id_with_position]
 
             # получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id
             # атрибутов а так же множество atr_id_set всех id атрибутов для дальнейшего получения словаря
@@ -61,11 +59,14 @@ class ProductAttributesField(forms.MultiValueField):
                     atr_id_set.update(sorted_list_of_attribute_id)
 
             if mode == "standart":
-                category_list = map(lambda x: [x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']],
-                                    parameters_structure.items())
+
+                category_list = [[x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']]
+                                 for x in parameters_structure.items()]
                 for category in sorted(category_list):
-                    group_list = map(lambda y: [y[1]['group_position'], int(y[0]), y[1]['attributes']],
-                                     category[2].items())
+                    group_list = [
+                        [y[1]['group_position'], int(y[0]), y[1]['attributes']]
+                        for y in category[2].items()
+                    ]
                     for group in sorted(group_list):
                         attribute_items = group[2].items()
                         sorted_list_of_attribute_id = get_attribute_id(attribute_items)
@@ -75,13 +76,12 @@ class ProductAttributesField(forms.MultiValueField):
                         atr_id_set.update(sorted_list_of_attribute_id)
 
             # получаем словарь category_names_dict где ключ элемнета это id категории а значение это имя категории
-            categories_id_list = map(lambda x: int(x), parameters_structure.keys())
+            categories_id_list = [int(x) for x in parameters_structure.keys()]
             category_names_dict = {}
             categories_data_list = Category.objects.filter(id__in=categories_id_list).values_list('id', 'name')
             for id_and_name in categories_data_list:
-                name = id_and_name[1]
-                link = reverse('admin:products_category_change', args=(id_and_name[0],))
-                category_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
+                link = reverse('admin:products_category_change', args=((cat_id := id_and_name[0]),))
+                category_names_dict[cat_id] = mark_safe(f"<a href={link}>{id_and_name[1]}</a>")
 
             # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы
             # (в данном случае со ссылкой на группу)
@@ -90,7 +90,7 @@ class ProductAttributesField(forms.MultiValueField):
             for id_and_name in group_data_list:
                 name = id_and_name[1]
                 link = reverse('admin:products_attrgroup_change', args=(id_and_name[0],))
-                group_names_dict[id_and_name[0]] = mark_safe("<a href={}>{}</a>".format(link, name))
+                group_names_dict[id_and_name[0]] = mark_safe(f"<a href={link}>{name}</a>")
 
             # получаем словарь attribute_parameters_dict где ключ элемента это id атрибута а значение это словарь
             atr_id_list = list(atr_id_set)
@@ -137,7 +137,7 @@ class ProductAttributesField(forms.MultiValueField):
                         ch.append([None, '--- Выберите значение ---'])
                         field = forms.ChoiceField(choices=ch, required=False)
 
-                    elif atr_type == 6:
+                    else:
                         ch = list(atr_variants.values_list('id', 'name'))
                         field = forms.MultipleChoiceField(choices=ch, required=False)
 
@@ -153,11 +153,11 @@ class ProductAttributesField(forms.MultiValueField):
                     else:
                         field.widget.attrs.update({'group_begin': 'no'})
                     list_widgets.append(field.widget)
-                    self.list_keys_attribute.append("%s-%s" % (group_id, atr_id))
+                    self.list_keys_attribute.append(f"{group_id}-{atr_id}")
 
         self.widget = ProductAttributesWidget(widgets=list_widgets, keys_atr=self.list_keys_attribute)
         super(ProductAttributesField, self).__init__(fields=list_fields, required=False, require_all_fields=False,
-                                                     label='', *args, **kwargs)
+                                                     label='', **kwargs)
 
     def compress(self, data_list):
         if len(data_list) != 0:
@@ -212,7 +212,8 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
             list_of_sets_products = []
             coincidences_list = set()
             for form in self.forms:
-                products = Product.objects.filter(related_categories__category=form.cleaned_data['category'])
+                products = Product.objects.filter(related_categories__category=form.cleaned_data[
+                    'category']).values_list('id', 'name')
                 list_of_sets_products.append(products)
             i = 0
             for query_1_of_products in list_of_sets_products:
@@ -230,9 +231,8 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                     break
             if coincidences_list:
                 raise ValidationError(
-                    'Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать '
-                    'в товарах: "%s"' % ', '.join(
-                        map(lambda x: x.name, coincidences_list)))
+                    "Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать"\
+                    + f"в товарах: {', '.join([ x[1] for x in coincidences_list ])}")
 
 
 class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryInProductFormActions):
