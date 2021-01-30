@@ -39,15 +39,17 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
         return queryset.annotate(
             s_attribute_group_names_list=ArrayAgg('category__related_groups__group__name'),
             s_attribute_group_id_list=ArrayAgg('category__related_groups__group__id'),
-            )
+        )
 
-    @staticmethod
-    def self_attribute_groups(obj):
+    # @staticmethod
+    def self_attribute_groups(self, obj):
         group_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
             for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
         ]
         return mark_safe(', '.join(group_links_list))
+
+    self_attribute_groups.short_description = 'Группы атрибутов категории'
 
 
 class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -72,6 +74,23 @@ class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.N
     autocomplete_fields = ('group',)
     # classes = ['collapse']
     extra = 0
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        # sq = Attribute.objects.filter('related_groups__group')
+        return queryset.annotate(
+            s_attributes_names_list=ArrayAgg('group__related_attributes__attribute__name'),
+            s_attributes_id_list=ArrayAgg('group__related_attributes__attribute__id'),
+        )
+
+    def self_attributes_links(self, obj):
+        attr_links_list = [
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({attr_id},)), attr_name)
+            for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
+        ]
+        return mark_safe(', '.join(attr_links_list))
+
+    self_attributes_links.short_description = 'Содержит атрибуты'
 
 
 class CategoriesInGroupInline(nested_admin.NestedTabularInline):
@@ -182,45 +201,40 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
     list_display = ('tree_actions', 'indented_title', 'self_attribute_groups',)
     model = Category
     prepopulated_fields = {"slug": ("name",)}
-    readonly_fields = ('id', 'created', 'updated', 'image_view', 'sign_view', 'self_attribute_groups',)
+    readonly_fields = ('id', 'created', 'updated', 'self_attribute_groups',)
     inlines = (
         ShotParametersOfProductInline, MiniParametersOfProductInline, AttrGroupInCategoryInline,
         ProductInCategoryInLine)
 
     def get_form(self, request, obj=None, **kwargs):
         if obj:
-            # request._obj_ = list(map(lambda x: x.group_id, obj.related_groups.all()))
             request._obj_ = AttrGroupInCategory.objects.filter(category_id=obj.id).values_list('id', flat=True)
-            # request._rel_shot_ = list(map(lambda x: x.attribute.attribute, obj.related_shot_attributes.all()))
-            # request._rel_mini_ = list(map(lambda x: x.attribute.attribute, obj.related_mini_attributes.all()))
         else:
             request._obj_ = []
-            # request._rel_shot_ = []
-            # request._rel_mini_ = []
         return super(CategoryModelAdmin, self).get_form(request, obj, **kwargs)
-
-    @staticmethod
-    def image_view(obj):
-        return mark_safe('<img src="{url}" width=95 height=95/>'.format(url=obj.image.url))
-
-    @staticmethod
-    def sign_view(obj):
-        return mark_safe('<img src="{url}" width=40 height=40/>'.format(url=obj.sign.url))
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
+        # sq = AttrGroup.objects.filter(related_categories__category_id=OuterRef('id')).values('id', 'name')
         return queryset.annotate(
+            # s_attribute_group_data_list=ArrayAgg(Row),
             s_attribute_group_names_list=ArrayAgg('related_groups__group__name'),
             s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),
-            )
+        )
 
-    @staticmethod
-    def self_attribute_groups(obj):
+    # @staticmethod
+    def self_attribute_groups(self, obj):
+        # group_links_list = [
+        #     "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
+        #     for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
+        # ]
         group_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
             for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
         ]
         return mark_safe(', '.join(group_links_list))
+
+    self_attribute_groups.short_description = "Группыы атрибутов категории--"
 
 
 def save_and_make_copy(objct, model_to_copy):
@@ -326,6 +340,22 @@ class AttrGroupAdmin(nested_admin.NestedModelAdmin):
                 AttributesInGroup.objects.create(group=group_copy, attribute=atr)
             return HttpResponseRedirect(reverse('admin:products_attrgroup_change', args=(group_copy.id,)))
         return super().response_change(request, obj)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            s_attributes_names_list=ArrayAgg('related_attributes__attribute__name'),
+            s_attributes_id_list=ArrayAgg('related_attributes__attribute__id'),
+        )
+
+    def self_attributes_links(self, obj):
+        attr_links_list = [
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({attr_id},)), attr_name)
+            for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
+        ]
+        return mark_safe(', '.join(attr_links_list))
+
+    self_attributes_links.short_description = 'Содержит атрибуты'
 
 
 @admin.register(Attribute)

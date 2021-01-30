@@ -1,6 +1,8 @@
+from collections import namedtuple
 from django import forms
 from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
+from operator import attrgetter
 
 from .models import *
 from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
@@ -31,66 +33,67 @@ class ProductAttributesField(forms.MultiValueField):
             else:
                 mode = 'standart'
 
-            group_items_list = []
-
-            group_id_list = []
-            atr_id_set = set()
-
             parameters_structure = instance.parameters_structure
             custom_order_group = instance.custom_order_group
 
-            def get_attribute_id(attr_it):
-                sorted_list_of_attribute_id_with_position = sorted([[x[1]['atr_position'], x[0]] for x in attr_it])
-                return [int(x[1]) for x in sorted_list_of_attribute_id_with_position]
+            def get_sorted_attribute_id_list(attr_it):
+                sorted_list_of_attribute_id_with_position = sorted([[_atr_data['atr_position'], _atr_id]
+                                                                    for _atr_id, _atr_data in attr_it.items()])
+                return [int(atr_data_wo_pos[1]) for atr_data_wo_pos in sorted_list_of_attribute_id_with_position]
 
-            # получаем список group_items_list из элементов: id категории, id группы, упорядоченый список из id
-            # атрибутов а так же множество atr_id_set всех id атрибутов для дальнейшего получения словаря
-            # attribute_parameters_dict { id atr: { 'name':___, 'type_of_value':____, 'value_list':____}}
+            group_items_list = []
+            group_id_list = []
+            atr_id_set = set()
+            # sorted_group_struct = namedtuple('sorted_group_struct', 'cat_id group_id sorted_atr_id_list')
+
             if mode == 'custom':
-                for category_and_group in custom_order_group:
-                    category_id = category_and_group[0]
-                    group_id = category_and_group[1]
-                    attribute_items = parameters_structure[str(category_id)]['groups_attributes'][str(group_id)][
-                        'attributes'].items()
-                    sorted_list_of_attribute_id = get_attribute_id(attribute_items)
-                    group_item = [category_id, group_id, sorted_list_of_attribute_id]
+                for category_and_group_id_list in custom_order_group:
+                    category_id = category_and_group_id_list[0]
+                    group_id = category_and_group_id_list[1]
+                    attributes_dict = parameters_structure[str(category_id)]['groups_attributes'][str(group_id)][
+                        'attributes']
+                    sorted_list_of_attribute_id = get_sorted_attribute_id_list(attributes_dict)
+                    group_item = {
+                        'cat_id': category_id, 'group_id': group_id, 'sorted_atr_id_list': sorted_list_of_attribute_id}
                     group_items_list.append(group_item)
                     group_id_list.append(group_id)
                     atr_id_set.update(sorted_list_of_attribute_id)
 
             if mode == "standart":
-
-                category_list = [[x[1]['cat_position'], int(x[0]), x[1]['groups_attributes']]
-                                 for x in parameters_structure.items()]
-                for category in sorted(category_list):
+                struct_with_pos = namedtuple('inner_struct', 'position id inner_elements')
+                category_list = [struct_with_pos(cat_data['cat_position'], int(cat_id), cat_data['groups_attributes'])
+                                 for cat_id, cat_data in parameters_structure.items()]
+                for category in sorted(category_list, key=attrgetter('position')):
                     group_list = [
-                        [y[1]['group_position'], int(y[0]), y[1]['attributes']]
-                        for y in category[2].items()
+                        struct_with_pos(group_data['group_position'], int(group_id), group_data['attributes'])
+                        for group_id, group_data in category.inner_elements.items()
                     ]
-                    for group in sorted(group_list):
-                        attribute_items = group[2].items()
-                        sorted_list_of_attribute_id = get_attribute_id(attribute_items)
-                        group_item = [category[1], group[1], sorted_list_of_attribute_id]
+                    for group in sorted(group_list, key=attrgetter('position')):
+                        attributes_dict = group.inner_elements
+                        sorted_list_of_attribute_id = get_sorted_attribute_id_list(attributes_dict)
+                        group_item = {'cat_id': category.id, "group_id": group.id, 'sorted_atr_id_list': sorted_list_of_attribute_id}
                         group_items_list.append(group_item)
-                        group_id_list.append(group[1])
+                        group_id_list.append(group.id)
                         atr_id_set.update(sorted_list_of_attribute_id)
 
             # получаем словарь category_names_dict где ключ элемнета это id категории а значение это имя категории
-            categories_id_list = [int(x) for x in parameters_structure.keys()]
-            category_names_dict = {}
-            categories_data_list = Category.objects.filter(id__in=categories_id_list).values_list('id', 'name')
-            for id_and_name in categories_data_list:
-                link = reverse('admin:products_category_change', args=((cat_id := id_and_name[0]),))
-                category_names_dict[cat_id] = mark_safe(f"<a href={link}>{id_and_name[1]}</a>")
+            categories_id_list = [int(id_str) for id_str in parameters_structure.keys()]
+            category_names_dict = {
+                cat.id: mark_safe(
+                    "<a href=%s>%s</a>" % (reverse('admin:products_category_change', args=(cat.id,)), cat.name)
+                )
+                for cat in Category.objects.filter(id__in=categories_id_list).values_list('id', 'name', named=True)
+            }
+            for cat_descr in Category.objects.filter(id__in=categories_id_list).values_list('id', 'name', named=True):
+                href = reverse('admin:products_category_change', args=(cat_descr.id,))
+                category_names_dict[cat_descr.id] = mark_safe(f"<a href={href}>{cat_descr.name}</a>")
 
-            # получаем словарь group_names_dict где ключ элемента это id группы а значение это имя группы
-            # (в данном случае со ссылкой на группу)
-            group_names_dict = {}
-            group_data_list = AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name')
-            for id_and_name in group_data_list:
-                name = id_and_name[1]
-                link = reverse('admin:products_attrgroup_change', args=(id_and_name[0],))
-                group_names_dict[id_and_name[0]] = mark_safe(f"<a href={link}>{name}</a>")
+            group_names_dict = {
+                attr_gr.id: mark_safe(
+                    "<a href=%s>%s</a>" % (reverse('admin:products_attrgroup_change', args=(attr_gr.id,)), attr_gr.name)
+                )
+                for attr_gr in AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name', named=True)
+            }
 
             # получаем словарь attribute_parameters_dict где ключ элемента это id атрибута а значение это словарь
             atr_id_list = list(atr_id_set)
@@ -105,19 +108,19 @@ class ProductAttributesField(forms.MultiValueField):
             # перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из
             # id атрибутов нополняем его именами категорий, групп
             for group_item in group_items_list:
-                group_item[0] = category_names_dict[group_item[0]]
-                group_item[1] = [group_item[1], group_names_dict[group_item[1]]]
+                group_item['cat_id'] = category_names_dict[group_item['cat_id']]
+                group_item['group_id'] = [group_item['group_id'], group_names_dict[group_item['group_id']]]
                 atr_dict = {}
-                for atr_id in group_item[2]:
+                for atr_id in group_item['sorted_atr_id_list']:
                     atr_dict[atr_id] = attribute_parameters_dict[atr_id]
-                group_item[2] = atr_dict
+                group_item['sorted_atr_id_list'] = atr_dict
 
             for group_items in group_items_list:
-                cat_name = group_items[0]
-                group_id = group_items[1][0]
-                group_name = group_items[1][1]
+                cat_name = group_items['cat_id']
+                group_id = group_items['group_id'][0]
+                group_name = group_items['group_id'][1]
                 atr_count = 0
-                for atr_id_str, atr_data in group_items[2].items():
+                for atr_id_str, atr_data in group_items['sorted_atr_id_list'].items():
                     atr_count += 1
                     atr_id = int(atr_id_str)
                     atr_name = atr_data['name']
@@ -143,7 +146,7 @@ class ProductAttributesField(forms.MultiValueField):
 
                     list_fields.append(field)
                     field.widget.attrs.update({'label': atr_name})
-                    if len(group_items[2]) - atr_count == 0:
+                    if len(group_items['sorted_atr_id_list']) - atr_count == 0:
                         field.widget.attrs.update({'group_end': 'yes'})
                     else:
                         field.widget.attrs.update({'group_end': 'no'})
@@ -231,8 +234,8 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                     break
             if coincidences_list:
                 raise ValidationError(
-                    "Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать"\
-                    + f"в товарах: {', '.join([ x[1] for x in coincidences_list ])}")
+                    "Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать" \
+                    + f"в товарах: {', '.join([x[1] for x in coincidences_list])}")
 
 
 class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryInProductFormActions):
@@ -241,9 +244,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
         self.instance.description = ''
         if self.has_changed():
             total_form_count = self.total_form_count()
-            total_deleted_forms = len(self.deleted_forms)
-            not_should_delete_forms_more_than_one = total_form_count - total_deleted_forms > 1
-            if not_should_delete_forms_more_than_one:
+            if (not_should_delete_forms_more_than_one := total_form_count - len(self.deleted_forms)) > 1:
                 self.group_duplicate_check()
             new_category_set = set()
             category_set_changed = False
@@ -323,17 +324,19 @@ class CategoryCollectionForm(forms.ModelForm):
             for cat_id in cat_list_id_list:
                 list_for_create_items = []
                 for group in AttrGroup.objects.filter(related_categories__category__id=cat_id).only('id'):
-                    if not (iocog := ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
-                                                                           category_collection_id=self.instance.id,
-                                                                           category_id=cat_id)).exists():
-                        list_for_create_items.append(iocog)
+                    if not (ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
+                                                                 category_collection_id=self.instance.id,
+                                                                 category_id=cat_id)).exists():
+                        list_for_create_items.append(
+                            ItemOfCustomOrderGroup(group_id=group.id, category_collection_id=self.instance.id,
+                                                   category_id=cat_id)
+                        )
                 ItemOfCustomOrderGroup.objects.bulk_create(list_for_create_items)
             new_set = set(cat_list_id_list)
             old_set = set(Category.objects.filter().values_list('id', flat=True))
             if old_set != new_set:
                 Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
                                                                                        custom_order_group=[])
-
         products_add = Product.objects.exclude(category_collection_id=self.instance.id).annotate(
             cnt=Count('related_categories')).filter(cnt=len_cat_list)
         for cat_id in cat_list_id_list:

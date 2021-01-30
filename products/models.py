@@ -294,11 +294,11 @@ class ProductInCategory(models.Model):
     get_product_category_link.short_description = 'Дополнительные категории'
     get_product_category_link = property(get_product_category_link)
 
-    def self_attribute_group(self):
-        return self.category.self_attribute_group
-
-    self_attribute_group.short_description = 'Группы атрибутов'
-    self_attribute_group = property(self_attribute_group)
+    # def self_attribute_group(self):
+    #     return self.category.self_attribute_group
+    #
+    # self_attribute_group.short_description = 'Группы атрибутов'
+    # self_attribute_group = property(self_attribute_group)
 
     def delete_attributes(self):
         category_id = str(self.category_id)
@@ -337,15 +337,15 @@ class AttrGroup(models.Model):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
-    def self_attributes_links(self):
-        links = [
-            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute_id,)), i.attribute.name)
-            for i in self.related_attributes.all().order_by('position')
-        ]
-        return mark_safe(', '.join(links))
-
-    self_attributes_links.short_description = 'Содержит атрибуты'
-    self_attributes_links = property(self_attributes_links)
+    # def self_attributes_links(self):
+    #     links = [
+    #         "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute_id,)), i.attribute.name)
+    #         for i in self.related_attributes.all().order_by('position')
+    #     ]
+    #     return mark_safe(', '.join(links))
+    #
+    # self_attributes_links.short_description = 'Содержит атрибуты'
+    # self_attributes_links = property(self_attributes_links)
 
 
 TYPE_OF_VALUE = (
@@ -567,11 +567,11 @@ class AttrGroupInCategory(models.Model):
         MiniParametersOfProduct.objects.filter(attribute__in=self.group.related_attributes.all(),
                                                category=self.category_id).delete()
 
-    def self_attributes_links(self):
-        return self.group.self_attributes_links
-
-    self_attributes_links.short_description = ' Содержит атрибуты'
-    self_attributes_links = property(self_attributes_links)
+    # def self_attributes_links(self):
+    #     return self.group.self_attributes_links
+    #
+    # self_attributes_links.short_description = ' Содержит атрибуты'
+    # self_attributes_links = property(self_attributes_links)
 
 
 class AttributesInGroup(models.Model):
