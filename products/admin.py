@@ -4,15 +4,16 @@ import nested_admin
 from django.db.models import Subquery, OuterRef, JSONField
 from django.contrib import admin
 from django.http import HttpResponseRedirect
+
 from django_summernote.admin import SummernoteModelAdmin
 from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
 
 from .admin_form import *
+from .models import *
 from django.contrib.postgres.aggregates import ArrayAgg
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    # fields = ['position', ('image_image', 'image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
     fields = ['position', ('image', 'name', 'is_main_1', 'is_main_2', 'is_active')]
     model = ProductImage
     sortable_field_name = "position"
@@ -31,7 +32,6 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
     model = ProductInCategory
     sortable_field_name = 'position_category'
     ordering = ('position_category',)
-    # classes = ['collapse']
     extra = 0
 
     def get_queryset(self, request):
@@ -41,7 +41,6 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
             s_attribute_group_id_list=ArrayAgg('category__related_groups__group__id'),
         )
 
-    # @staticmethod
     def self_attribute_groups(self, obj):
         group_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
@@ -58,7 +57,6 @@ class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.Nes
     model = ProductInCategory
     sortable_field_name = "position_product"
     ordering = ('position_product',)
-    # classes = ['collapse']
     extra = 0
     verbose_name_plural = 'Порядок товаров в категории'
     verbose_name = 'Товар'
@@ -146,7 +144,6 @@ class MiniParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_adm
     model = MiniParametersOfProduct
     sortable_field_name = "position"
 
-    # classes = ['collapse']
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'attribute':
             kwargs["queryset"] = AttributesInGroup.objects.filter(group__in=request._obj_)
@@ -158,7 +155,6 @@ class PricesOtherShopInline(nested_admin.NestedTabularInline):
     fields = ('created', 'shop', 'price', 'updated', 'url', 'info')
     readonly_fields = ('created', 'updated',)
     extra = 0
-    # sortable_field_name = "updated"
 
 
 @admin.register(Category)
@@ -222,7 +218,6 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
             s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),
         )
 
-    # @staticmethod
     def self_attribute_groups(self, obj):
         # group_links_list = [
         #     "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)

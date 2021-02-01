@@ -1,10 +1,12 @@
 from collections import namedtuple
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
 from operator import attrgetter
-
-from .models import *
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
 from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
 
 
@@ -89,17 +91,17 @@ class ProductAttributesField(forms.MultiValueField):
             }
 
             # получаем словарь имен, типов и списка значений атрибутов где ключ элемента это id атрибута.
-            atr_data_with_names_type = namedtuple('atr_data_with_names_type', 'name type_of_value value_list')
+            atr_data_with_names_type_and_values = namedtuple(
+                'atr_data_with_names_type', 'name type_of_value value_list')
             attribute_names_types_values_dict = {
-
-                attr.id: atr_data_with_names_type(attr.name, attr.type_of_value, attr.value_list.all())
+                attr.id: atr_data_with_names_type_and_values(attr.name, attr.type_of_value, attr.value_list.all())
                 for attr in Attribute.objects.filter(id__in=list(atr_id_set)).only('id', 'name', 'type_of_value',
                                                                                    'value_list')
             }
 
-            field_data_type = namedtuple('field_data_type', 'cat_name group_id group_name attr_field_data')
-            fields_data_list = [
-                field_data_type(
+            field_ready_data_type = namedtuple('field_data_type', 'cat_name group_id group_name attr_field_data')
+            ready_fields_data_list = [
+                field_ready_data_type(
                     category_names_dict[group_data_dict.cat_id],
                     group_data_dict.group_id,
                     group_names_dict[group_data_dict.group_id],
@@ -108,7 +110,7 @@ class ProductAttributesField(forms.MultiValueField):
                 for group_data_dict in group_data_dict_sorted_list
             ]
 
-            for field_data in fields_data_list:
+            for field_data in ready_fields_data_list:
                 atr_count = 0
                 for atr_id_str, atr_data in field_data.attr_field_data.items():
                     atr_count += 1
@@ -164,7 +166,6 @@ class ProductForm(forms.ModelForm):
         if cleaned_data["parameters_structure"] != self.instance.parameters_structure:
             err = mark_safe('Структура характеристик была изменена: ' + self.instance.get_link_refresh)
             raise forms.ValidationError(err)
-
         if 'parameters' in self.changed_data:
             update_addict_attr_values(self.instance, cleaned_data['parameters'])
 
@@ -218,14 +219,13 @@ class CategoriesInGroupInlineFormSet(forms.models.BaseInlineFormSet):
                     break
             if coincidences_list:
                 raise ValidationError(
-                    "Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать" \
+                    "Ошибка, невозможно добавить группу атрибутов в указаные категории так как она будет дублировать"
                     + f"в товарах: {', '.join([x[1] for x in coincidences_list])}")
 
 
 class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryInProductFormActions):
     def clean(self):
         super().clean()
-        self.instance.description = ''
         if self.has_changed():
             total_form_count = self.total_form_count()
             if (not_should_delete_forms_more_than_one := total_form_count - len(self.deleted_forms)) > 1:
@@ -249,8 +249,6 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                print(
-                                    f'категория {form.initial["category"]} изменена на {form.cleaned_data["category"].id}')
                                 self.delete_attributes(self.instance, Category.objects.get(id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
@@ -262,7 +260,6 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                                                         form.cleaned_data["position_category"])
 
             if not not_should_delete_forms_more_than_one and total_form_count > 1:
-                print('delete CC')
                 self.instance.category_collection_id = None
                 self.instance.custom_order_group = []
             else:
