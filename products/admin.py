@@ -78,12 +78,12 @@ class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.N
         # sq = Attribute.objects.filter('related_groups__group')
         return queryset.annotate(
             s_attributes_names_list=ArrayAgg('group__related_attributes__attribute__name'),
-            s_attributes_id_list=ArrayAgg('group__related_attributes__attribute__id'),
+            s_attributes_id_list=ArrayAgg('group__related_attributes__attribute__id')
         )
 
     def self_attributes_links(self, obj):
         attr_links_list = [
-            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({attr_id},)), attr_name)
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(attr_id,)), attr_name)
             for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
         ]
         return mark_safe(', '.join(attr_links_list))
@@ -345,7 +345,7 @@ class AttrGroupAdmin(nested_admin.NestedModelAdmin):
 
     def self_attributes_links(self, obj):
         attr_links_list = [
-            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({attr_id},)), attr_name)
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(attr_id,)), attr_name)
             for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
         ]
         return mark_safe(', '.join(attr_links_list))
