@@ -24,28 +24,23 @@ class ProductAttributesField(forms.MultiValueField):
         list_fields = []
         list_widgets = []
         self.list_keys_attribute = []
-
         if instance:
-            # self.list_group_labels = []
-
             if instance.custom_order_group != [] and instance.is_active_custom_order_group:
                 mode = 'custom'
             else:
-                mode = 'standart'
-
+                mode = 'standard'
             parameters_structure = instance.parameters_structure
             custom_order_group = instance.custom_order_group
 
-            def get_sorted_attribute_id_list(attr_it):
+            def get_sorted_attribute_id_list(attr_dict):
                 sorted_list_of_attribute_id_with_position = sorted([[_atr_data['atr_position'], _atr_id]
-                                                                    for _atr_id, _atr_data in attr_it.items()])
+                                                                    for _atr_id, _atr_data in attr_dict.items()])
                 return [int(atr_data_wo_pos[1]) for atr_data_wo_pos in sorted_list_of_attribute_id_with_position]
 
-            group_items_list = []
+            group_data_dict_sorted_list = []
             group_id_list = []
             atr_id_set = set()
-            # sorted_group_struct = namedtuple('sorted_group_struct', 'cat_id group_id sorted_atr_id_list')
-
+            sorted_group_struct = namedtuple('sorted_group_struct', 'cat_id group_id sorted_atr_id_list')
             if mode == 'custom':
                 for category_and_group_id_list in custom_order_group:
                     category_id = category_and_group_id_list[0]
@@ -53,13 +48,13 @@ class ProductAttributesField(forms.MultiValueField):
                     attributes_dict = parameters_structure[str(category_id)]['groups_attributes'][str(group_id)][
                         'attributes']
                     sorted_list_of_attribute_id = get_sorted_attribute_id_list(attributes_dict)
-                    group_item = {
-                        'cat_id': category_id, 'group_id': group_id, 'sorted_atr_id_list': sorted_list_of_attribute_id}
-                    group_items_list.append(group_item)
+                    group_cat_attrlist_sorted_id = sorted_group_struct(
+                        category_id, group_id, sorted_list_of_attribute_id)
+                    group_data_dict_sorted_list.append(group_cat_attrlist_sorted_id)
                     group_id_list.append(group_id)
                     atr_id_set.update(sorted_list_of_attribute_id)
 
-            if mode == "standart":
+            if mode == "standard":
                 struct_with_pos = namedtuple('inner_struct', 'position id inner_elements')
                 category_list = [struct_with_pos(cat_data['cat_position'], int(cat_id), cat_data['groups_attributes'])
                                  for cat_id, cat_data in parameters_structure.items()]
@@ -71,12 +66,13 @@ class ProductAttributesField(forms.MultiValueField):
                     for group in sorted(group_list, key=attrgetter('position')):
                         attributes_dict = group.inner_elements
                         sorted_list_of_attribute_id = get_sorted_attribute_id_list(attributes_dict)
-                        group_item = {'cat_id': category.id, "group_id": group.id, 'sorted_atr_id_list': sorted_list_of_attribute_id}
-                        group_items_list.append(group_item)
+                        group_cat_attrlist_sorted_id = sorted_group_struct(
+                            category.id, group.id, sorted_list_of_attribute_id)
+                        group_data_dict_sorted_list.append(group_cat_attrlist_sorted_id)
                         group_id_list.append(group.id)
                         atr_id_set.update(sorted_list_of_attribute_id)
 
-            # получаем словарь category_names_dict где ключ элемнета это id категории а значение это имя категории
+            # получаем словарь имен категорий и групп, где ключ это id
             categories_id_list = [int(id_str) for id_str in parameters_structure.keys()]
             category_names_dict = {
                 cat.id: mark_safe(
@@ -84,9 +80,6 @@ class ProductAttributesField(forms.MultiValueField):
                 )
                 for cat in Category.objects.filter(id__in=categories_id_list).values_list('id', 'name', named=True)
             }
-            for cat_descr in Category.objects.filter(id__in=categories_id_list).values_list('id', 'name', named=True):
-                href = reverse('admin:products_category_change', args=(cat_descr.id,))
-                category_names_dict[cat_descr.id] = mark_safe(f"<a href={href}>{cat_descr.name}</a>")
 
             group_names_dict = {
                 attr_gr.id: mark_safe(
@@ -95,39 +88,31 @@ class ProductAttributesField(forms.MultiValueField):
                 for attr_gr in AttrGroup.objects.filter(id__in=group_id_list).values_list('id', 'name', named=True)
             }
 
-            # получаем словарь attribute_parameters_dict где ключ элемента это id атрибута а значение это словарь
-            atr_id_list = list(atr_id_set)
-            attribute_parameters_dict = {}
-            attributes_data_query = Attribute.objects.filter(id__in=atr_id_list).only('id', 'name', 'type_of_value',
-                                                                                      'value_list')
-            for attribute in attributes_data_query:
-                attribute_parameters_dict[attribute.id] = {'name': attribute.name,
-                                                           'type_of_value': attribute.type_of_value,
-                                                           'value_list': attribute.value_list.all()}
+            # получаем словарь имен, типов и списка значений атрибутов где ключ элемента это id атрибута.
+            atr_data_with_names_type = namedtuple('atr_data_with_names_type', 'name type_of_value value_list')
+            attribute_names_types_values_dict = {
 
-            # перебираем group_items_list из элементов: id категории, id группы, упорядоченый список из
-            # id атрибутов нополняем его именами категорий, групп
-            for group_item in group_items_list:
-                group_item['cat_id'] = category_names_dict[group_item['cat_id']]
-                group_item['group_id'] = [group_item['group_id'], group_names_dict[group_item['group_id']]]
-                atr_dict = {}
-                for atr_id in group_item['sorted_atr_id_list']:
-                    atr_dict[atr_id] = attribute_parameters_dict[atr_id]
-                group_item['sorted_atr_id_list'] = atr_dict
+                attr.id: atr_data_with_names_type(attr.name, attr.type_of_value, attr.value_list.all())
+                for attr in Attribute.objects.filter(id__in=list(atr_id_set)).only('id', 'name', 'type_of_value',
+                                                                                   'value_list')
+            }
 
-            for group_items in group_items_list:
-                cat_name = group_items['cat_id']
-                group_id = group_items['group_id'][0]
-                group_name = group_items['group_id'][1]
+            field_data_type = namedtuple('field_data_type', 'cat_name group_id group_name attr_field_data')
+            fields_data_list = [
+                field_data_type(
+                    category_names_dict[group_data_dict.cat_id],
+                    group_data_dict.group_id,
+                    group_names_dict[group_data_dict.group_id],
+                    {atr_id: attribute_names_types_values_dict[atr_id] for atr_id in group_data_dict.sorted_atr_id_list}
+                )
+                for group_data_dict in group_data_dict_sorted_list
+            ]
+
+            for field_data in fields_data_list:
                 atr_count = 0
-                for atr_id_str, atr_data in group_items['sorted_atr_id_list'].items():
+                for atr_id_str, atr_data in field_data.attr_field_data.items():
                     atr_count += 1
-                    atr_id = int(atr_id_str)
-                    atr_name = atr_data['name']
-                    atr_type = atr_data['type_of_value']
-                    atr_variants = atr_data['value_list']
-
-                    if atr_type == 1:
+                    if (atr_type := atr_data.type_of_value) == 1:
                         field = forms.CharField(required=False)
                     elif atr_type == 2:
                         field = forms.IntegerField(required=False)
@@ -136,27 +121,26 @@ class ProductAttributesField(forms.MultiValueField):
                     elif atr_type == 4:
                         field = forms.BooleanField(required=False)
                     elif atr_type == 5:
-                        ch = list(atr_variants.values_list('id', 'name'))
+                        ch = list(atr_data.value_list.values_list('id', 'name'))
                         ch.append([None, '--- Выберите значение ---'])
                         field = forms.ChoiceField(choices=ch, required=False)
-
                     else:
-                        ch = list(atr_variants.values_list('id', 'name'))
+                        ch = list(atr_data.value_list.values_list('id', 'name'))
                         field = forms.MultipleChoiceField(choices=ch, required=False)
-
                     list_fields.append(field)
-                    field.widget.attrs.update({'label': atr_name})
-                    if len(group_items['sorted_atr_id_list']) - atr_count == 0:
+                    field.widget.attrs.update({'label': atr_data.name})
+                    if len(field_data.attr_field_data) - atr_count == 0:
                         field.widget.attrs.update({'group_end': 'yes'})
                     else:
                         field.widget.attrs.update({'group_end': 'no'})
                     if atr_count == 1:
                         field.widget.attrs.update(
-                            {'group_begin': 'yes', 'group_name': group_name, 'category_name': cat_name})
+                            {'group_begin': 'yes', 'group_name': field_data.group_name,
+                             'category_name': field_data.cat_name})
                     else:
                         field.widget.attrs.update({'group_begin': 'no'})
                     list_widgets.append(field.widget)
-                    self.list_keys_attribute.append(f"{group_id}-{atr_id}")
+                    self.list_keys_attribute.append(f"{field_data.group_id}-{atr_id_str}")
 
         self.widget = ProductAttributesWidget(widgets=list_widgets, keys_atr=self.list_keys_attribute)
         super(ProductAttributesField, self).__init__(fields=list_fields, required=False, require_all_fields=False,
@@ -325,8 +309,8 @@ class CategoryCollectionForm(forms.ModelForm):
                 list_for_create_items = []
                 for group in AttrGroup.objects.filter(related_categories__category__id=cat_id).only('id'):
                     if not (ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
-                                                                 category_collection_id=self.instance.id,
-                                                                 category_id=cat_id)).exists():
+                                                                  category_collection_id=self.instance.id,
+                                                                  category_id=cat_id)).exists():
                         list_for_create_items.append(
                             ItemOfCustomOrderGroup(group_id=group.id, category_collection_id=self.instance.id,
                                                    category_id=cat_id)
