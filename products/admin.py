@@ -52,8 +52,8 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
 
 
 class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    fields = ('position_product', 'product', 'get_product_category_link')
-    readonly_fields = ('product', 'get_product_category_link')
+    fields = ('position_product', 'product', 'list_of_product_categories_names')
+    readonly_fields = ('product', 'list_of_product_categories_names')
     model = ProductInCategory
     sortable_field_name = "position_product"
     ordering = ('position_product',)
@@ -61,6 +61,15 @@ class ProductInCategoryInLine(nested_admin.SortableHiddenMixin, nested_admin.Nes
     verbose_name_plural = 'Порядок товаров в категории'
     verbose_name = 'Товар'
     can_delete = False
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(product_categories_names_list=ArrayAgg('product__related_categories__category__name'))
+
+    def list_of_product_categories_names(self, obj):
+        return mark_safe(', '.join(obj.product_categories_names_list))
+
+    list_of_product_categories_names.short_description = "Категории в которые входит товар"
 
 
 class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -123,6 +132,22 @@ class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admi
 
     # def has_add_permission(self, request, obj=None):
     #     return False
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        # sq = Attribute.objects.filter('related_groups__group')
+        return queryset.annotate(
+            s_attributes_names_list=ArrayAgg('group__related_attributes__attribute__name'),
+            s_attributes_id_list=ArrayAgg('group__related_attributes__attribute__id')
+        )
+
+    def self_attributes_links(self, obj):
+        attr_links_list = [
+            "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(attr_id,)), attr_name)
+            for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
+        ]
+        return mark_safe(', '.join(attr_links_list))
+    self_attributes_links.short_description = 'Содержит атрибуты'
 
 
 class ShotParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -251,7 +276,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     form = ProductForm
     model = Product
     summernote_fields = ('description',)
-    list_display = ('art', 'name', 'rating', 'get_product_category_link', 'is_active')
+    list_display = ('art', 'name', 'rating', 'list_of_product_categories_names', 'is_active')
     list_display_links = ('name',)
     list_editable = ("rating", 'is_active',)
     prepopulated_fields = {"slug": ("name",)}
@@ -305,6 +330,14 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 ProductImage.objects.create(product=product_copy, image=ph.image)
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(product_categories_names_list=ArrayAgg('related_categories__category__name'))
+
+    def list_of_product_categories_names(self, obj):
+        return mark_safe(', '.join(obj.product_categories_names_list))
+    list_of_product_categories_names.short_description = "Категории в которые входит товар"
 
 
 @admin.register(Country)

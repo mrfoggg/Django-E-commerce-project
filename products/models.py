@@ -288,17 +288,6 @@ class ProductInCategory(models.Model):
         category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
         return f'"{category}" - {name}'
 
-    def get_product_category_link(self):
-        return self.product.get_product_category_link
-
-    get_product_category_link.short_description = 'Дополнительные категории'
-    get_product_category_link = property(get_product_category_link)
-
-    # def self_attribute_group(self):
-    #     return self.category.self_attribute_group
-    #
-    # self_attribute_group.short_description = 'Группы атрибутов'
-    # self_attribute_group = property(self_attribute_group)
 
     def delete_attributes(self):
         category_id = str(self.category_id)
@@ -729,16 +718,16 @@ class ItemOfCustomOrderGroup(models.Model):
     def __str__(self):
         return self.group.name
 
-    def self_attributes_links(self):
-        return self.group.self_attributes_links
+    # def self_attributes_links(self):
+    #     return self.group.self_attributes_links
 
-    self_attributes_links.short_description = 'Содержит атрибуты'
+    # self_attributes_links.short_description = 'Содержит атрибуты'
 
     def getlink_group(self):
         return self.group.get_link
 
     getlink_group.short_description = 'Группа атрибутов'
-    self_attributes_links = property(self_attributes_links)
+    # self_attributes_links = property(self_attributes_links)
 
 
 class ShotParametersOfProduct(models.Model):

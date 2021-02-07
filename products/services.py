@@ -151,11 +151,12 @@ class CategoryInProductFormActions:
 
     @staticmethod
     def reorder_attributes(product, category_id, new_category_order):
-        print('RUN reorder')
         if (cat_id := str(category_id)) in product.shot_parameters_structure.keys():
             product.shot_parameters_structure[cat_id]["cat_position"] = new_category_order
         if cat_id in product.mini_parameters_structure.keys():
             product.mini_parameters_structure[cat_id]["cat_position"] = new_category_order
+        if cat_id in product.parameters_structure.keys():
+            product.parameters_structure[cat_id]["cat_position"] = new_category_order
 
     @staticmethod
     def add_category_collection(product, category_set):
