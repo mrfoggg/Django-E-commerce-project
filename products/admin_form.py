@@ -1,7 +1,7 @@
 from collections import namedtuple
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.forms import HiddenInput, NumberInput, TextInput
 # from operator import attrgetter
 from django.urls import reverse
@@ -287,23 +287,20 @@ class CategoryCollectionForm(forms.ModelForm):
         cat_list_id_list = cat_list.order_by('mptt_level').values_list('id', flat=True)
         other_same_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
             cnt=len_cat_list)
-
         for cat_id in cat_list_id_list:
             other_same_collection = other_same_collection.filter(category_list__id=cat_id)
-
         if other_same_collection.exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Такой набор категорий уже определен')
-
         if self.instance.id:
+            print(cat_list_id_list)
             for cat_id in cat_list_id_list:
                 ItemOfCustomOrderGroup.objects.bulk_create([
                         ItemOfCustomOrderGroup(
                             group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
                         for group_id in AttrGroup.objects.filter(
-                            related_categories__category__id=cat_id,
-                            related_attributes__isnull=False).values_list('id', flat=True)
-                        if not (ItemOfCustomOrderGroup.objects.filter(group_id=group_id,
-                                category_collection_id=self.instance.id, category_id=cat_id)).exists()])
+                            related_categories__category_id=cat_id,
+                            ).values_list('id', flat=True)
+                        if AttrGroup.objects.get(id=group_id).related_attributes.exists()])
             new_set = set(cat_list_id_list)
             old_set = set(Category.objects.filter().values_list('id', flat=True))
             if old_set != new_set:
@@ -326,8 +323,7 @@ class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
         super().clean()
         custom_order_list = [
             [form.cleaned_data['position'], form.cleaned_data['id'].category_id, form.cleaned_data['id'].group_id]
-            for form in self.forms
-        ]
+            for form in self.forms]
         custom_order_list.sort()
         group_list = [x[1:] for x in custom_order_list]
         if self.instance.is_active_custom_order_group:
