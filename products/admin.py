@@ -339,6 +339,22 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
         return mark_safe(', '.join(obj.product_categories_names_list))
     list_of_product_categories_names.short_description = "Категории в которые входит товар"
 
+    @staticmethod
+    def get_addict_attributes_data_value_strings(attrs_data_obj_sorted_list):
+        return mark_safe('<br>'.join([
+            "%s-%s" % (attr_data.name,
+                       ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str)
+            for attr_data in attrs_data_obj_sorted_list]))
+
+    def get_shot_parameters_admin_field(self, obj):
+        return self.get_addict_attributes_data_value_strings(obj.sorted_shot_attributes)
+    get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
+
+    def get_mini_parameters_admin_field(self, obj):
+        return self.get_addict_attributes_data_value_strings(obj.sorted_mini_attributes)
+    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
+
+
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
