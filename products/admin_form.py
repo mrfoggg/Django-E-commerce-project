@@ -296,18 +296,14 @@ class CategoryCollectionForm(forms.ModelForm):
 
         if self.instance.id:
             for cat_id in cat_list_id_list:
-                list_for_create_items = []
-                for group_id in AttrGroup.objects.filter(
-                        related_categories__category__id=cat_id,
-                        related_attributes__isnull=False).values_list('id', flat=True):
-                    if not (ItemOfCustomOrderGroup.objects.filter(group_id=group_id,
-                                                                  category_collection_id=self.instance.id,
-                                                                  category_id=cat_id)).exists():
-                        list_for_create_items.append(
-                            ItemOfCustomOrderGroup(group_id=group_id, category_collection_id=self.instance.id,
-                                                   category_id=cat_id)
-                        )
-                ItemOfCustomOrderGroup.objects.bulk_create(list_for_create_items)
+                ItemOfCustomOrderGroup.objects.bulk_create([
+                        ItemOfCustomOrderGroup(
+                            group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
+                        for group_id in AttrGroup.objects.filter(
+                            related_categories__category__id=cat_id,
+                            related_attributes__isnull=False).values_list('id', flat=True)
+                        if not (ItemOfCustomOrderGroup.objects.filter(group_id=group_id,
+                                category_collection_id=self.instance.id, category_id=cat_id)).exists()])
             new_set = set(cat_list_id_list)
             old_set = set(Category.objects.filter().values_list('id', flat=True))
             if old_set != new_set:
