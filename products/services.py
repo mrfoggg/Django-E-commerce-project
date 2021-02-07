@@ -9,8 +9,8 @@ def get_and_save_product_pos_in_cat(form, position):
     product_in_cat_item = form.save(commit=False)
     product_in_cat_item.position_product = position
     product_in_cat_item.save()
-    print(f'product_id: {product_in_cat_item.id}')
-    print(f'product_position: {product_in_cat_item.position_product}')
+    # print(f'product_id: {product_in_cat_item.id}')
+    # print(f'product_position: {product_in_cat_item.position_product}')
 
 
 def update_addict_attr_values(prod, new_param):

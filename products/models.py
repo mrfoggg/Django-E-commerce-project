@@ -155,30 +155,17 @@ class Product(models.Model):
         return "<a href=%s>%s</a>" % (reverse('admin:products_product_change', args=(self.id,)), 'Обновить')
 
     @staticmethod
-    def get_sorted_addict_attr(attr_field):
-        attribute_data = namedtuple('attribute_data', 'pos name full_id id value_str value')
-        parameters_srt = sorted(
-            [
-                [  # одна из категорий [id: {'cat_position': pos, "shot_attributes": {}]
-                    cat['cat_position'],
-                    sorted(
-                        [
-                            attribute_data(
-                                attr[1]['pos_atr'],
-                                Attribute.objects.get(pk=attr[1]['id']).name if (attr[1]['name'] is None) else attr[1][
-                                    'name'],
-                                attr[0],  # full_id для получения значения атрибута
-                                attr[1]['id'],
-                                attr[1]['value_str'],
-                                attr[1]['value']
-                            )
-                            for attr in cat['attributes'].items()
-                        ],  # список  атрибутов в категории attr
-                        key=attrgetter('pos'))  # сортировать по ключу 'pos'
-                ]
-                for cat in attr_field.values()
+    def get_sorted_addict_attr(addict_attr_field):
+        addict_attr_sorted_list = []
+        attribute_data = namedtuple('attribute_data', 'name full_id id value_str value')
+        for attr_category in sorted(addict_attr_field.values(), key=lambda cat: cat["cat_position"]):
+            addict_attr_sorted_list.extend([
+                attribute_data(
+                    attr_d[1]['name'], attr_d[0], attr_d[1]['id'], attr_d[1]['value_str'], attr_d[1]['value']
+                )
+                for attr_d in sorted(attr_category["attributes"].items(), key=lambda attr: attr[1]["pos_atr"])
             ])
-        return parameters_srt
+            return addict_attr_sorted_list
 
     @property
     def sorted_shot_attributes(self):
@@ -189,27 +176,20 @@ class Product(models.Model):
         return self.get_sorted_addict_attr(self.mini_parameters_structure)
 
     @staticmethod
-    def reformat_addict_attr_for_admin(attrs_sorted):
-        parameters_display = [
-            '<br>'.join(
-                [
-                    '%s-%s' % (
-                        attr_data.name,
-                        ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str
-                    )
-                    for attr_data in cat[1]
-                ])  # категория без порядкового номера
-            for cat in attrs_sorted]  # отсортированый перечень категорий
-        return mark_safe('<br>'.join(parameters_display))
+    def get_addict_attributes_data_value_strings(attrs_data_obj_sorted_list):
+        return mark_safe('<br>'.join([
+            "%s-%s" % (attr_data.name,
+                       ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str)
+            for attr_data in attrs_data_obj_sorted_list]))
 
     def get_shot_parameters_admin_field(self):
-        return self.reformat_addict_attr_for_admin(self.sorted_shot_attributes)
+        return self.get_addict_attributes_data_value_strings(self.sorted_shot_attributes)
 
     get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
     get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
 
     def get_mini_parameters_admin_field(self):
-        return self.reformat_addict_attr_for_admin(self.sorted_mini_attributes)
+        return self.get_addict_attributes_data_value_strings(self.sorted_mini_attributes)
 
     get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
     get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)

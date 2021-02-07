@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
-from operator import attrgetter
+# from operator import attrgetter
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
