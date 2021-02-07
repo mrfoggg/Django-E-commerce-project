@@ -1,14 +1,14 @@
 from collections import namedtuple
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
-# from operator import attrgetter
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
-from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values, \
+from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product, \
     delete_attributes_product_in_cat
+
+from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -292,7 +292,6 @@ class CategoryCollectionForm(forms.ModelForm):
         if other_same_collection.exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Такой набор категорий уже определен')
         if self.instance.id:
-            print(cat_list_id_list)
             for cat_id in cat_list_id_list:
                 ItemOfCustomOrderGroup.objects.bulk_create([
                         ItemOfCustomOrderGroup(
