@@ -157,14 +157,17 @@ class Product(models.Model):
     def get_sorted_addict_attr(addict_attr_field):
         addict_attr_sorted_list = []
         attribute_data = namedtuple('attribute_data', 'name full_id id value_str value')
-        for attr_category in sorted(addict_attr_field.values(), key=lambda cat: cat["cat_position"]):
-            addict_attr_sorted_list.extend([
-                attribute_data(
-                    attr_d[1]['name'], attr_d[0], attr_d[1]['id'], attr_d[1]['value_str'], attr_d[1]['value']
-                )
-                for attr_d in sorted(attr_category["attributes"].items(), key=lambda attr: attr[1]["pos_atr"])
-            ])
-            return addict_attr_sorted_list
+        if not addict_attr_field == {}:
+            for attr_category in sorted(addict_attr_field.values(), key=lambda cat: cat["cat_position"]):
+                addict_attr_sorted_list.extend([
+                    attribute_data(
+                        attr_d[1]['name'], attr_d[0], attr_d[1]['id'], attr_d[1]['value_str'], attr_d[1]['value']
+                    )
+                    for attr_d in sorted(attr_category["attributes"].items(), key=lambda attr: attr[1]["pos_atr"])
+                ])
+                return addict_attr_sorted_list
+        else:
+            return []
 
     @property
     def sorted_shot_attributes(self):
@@ -181,7 +184,7 @@ class ProductImage(models.Model):
     created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
     updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
     product = models.ForeignKey('Product', blank=True, null=True, default=None, on_delete=models.CASCADE,
-                                verbose_name='Товар')
+                                verbose_name='Товар', related_name='related_image')
     image = models.ImageField(upload_to='product_images/', blank=True, null=True, verbose_name='Фото товара')
     is_main_1 = models.BooleanField(default=True, verbose_name='Главное фото')
     is_main_2 = models.BooleanField(default=True, verbose_name='Главное фото при наведении')

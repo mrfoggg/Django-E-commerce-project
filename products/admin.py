@@ -238,22 +238,14 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        # sq = AttrGroup.objects.filter(related_categories__category_id=OuterRef('id')).values('id', 'name')
         return queryset.annotate(
-            # s_attribute_group_data_list=ArrayAgg(Row),
             s_attribute_group_names_list=ArrayAgg('related_groups__group__name'),
-            s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),
-        )
+            s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),)
 
     def self_attribute_groups(self, obj):
-        # group_links_list = [
-        #     "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
-        #     for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
-        # ]
         group_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
-            for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
-        ]
+            for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)]
         return mark_safe(', '.join(group_links_list))
 
     self_attribute_groups.short_description = "Группыы атрибутов категории--"
@@ -314,7 +306,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 ('description', 'parameters_structure'),
                 ('is_active_custom_order_group', 'get_category_collection_link',)),
             'classes': (
-                'order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-productimage',
+                'order-0', 'baton-tabs-init', 'baton-tab-inline-related_categories', 'baton-tab-inline-related_image',
                 'baton-tab-inline-pricesothershop',),
         }),
 
@@ -326,10 +318,22 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
             product_copy.art = None
             product_copy.url = None
             product_copy.save()
-            for cat in Category.objects.filter(related_products__product_id=obj.id):
-                ProductInCategory.objects.create(product=product_copy, category=cat)
-            for ph in obj.productimage_set.all():
-                ProductImage.objects.create(product=product_copy, image=ph.image)
+            if obj.related_categories.exists():
+                category_in_product_copies_list = []
+                for category_in_product_item in obj.related_categories.all():
+                    copy_category_in_product_item = copy.copy(category_in_product_item)
+                    copy_category_in_product_item.id = None
+                    copy_category_in_product_item.product = product_copy
+                    category_in_product_copies_list.append(copy_category_in_product_item)
+                ProductInCategory.objects.bulk_create(category_in_product_copies_list)
+            if obj.related_image.exists():
+                image_for_products_copies_list = []
+                for image_for_products_item in obj.related_image.all():
+                    copy_image_for_products_item = copy.copy(image_for_products_item)
+                    copy_image_for_products_item.id = None
+                    copy_image_for_products_item.product = product_copy
+                    image_for_products_copies_list.append(copy_image_for_products_item)
+                ProductImage.objects.bulk_create(image_for_products_copies_list)
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
 
@@ -386,13 +390,13 @@ class AttrGroupAdmin(nested_admin.NestedModelAdmin):
             group_copy = save_and_make_copy(obj, AttrGroup)
             group_copy.save()
             if obj.related_attributes.exists():
-                attr_in_group_copy_list = []
+                attr_in_group_copies_list = []
                 for attr_in_group_item in obj.related_attributes.all():
                     copy_attr_in_group_item = copy.copy(attr_in_group_item)
                     copy_attr_in_group_item.id = None
                     copy_attr_in_group_item.group = group_copy
-                    attr_in_group_copy_list.append(copy_attr_in_group_item)
-                AttributesInGroup.objects.bulk_create(attr_in_group_copy_list)
+                    attr_in_group_copies_list.append(copy_attr_in_group_item)
+                AttributesInGroup.objects.bulk_create(attr_in_group_copies_list)
             return HttpResponseRedirect(reverse('admin:products_attrgroup_change', args=(group_copy.id,)))
         return super().response_change(request, obj)
 

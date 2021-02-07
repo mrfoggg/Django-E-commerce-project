@@ -8,7 +8,8 @@ from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue, Ca
 def get_and_save_product_pos_in_cat(form, position):
     product_in_cat_item = form.save(commit=False)
     product_in_cat_item.position_product = position
-    product_in_cat_item.save()
+    # form.save()
+    # product_in_cat_item.save()
     # print(f'product_id: {product_in_cat_item.id}')
     # print(f'product_position: {product_in_cat_item.position_product}')
 
