@@ -1,5 +1,3 @@
-import copy
-
 import nested_admin
 # from django.db.models import Subquery, OuterRef, JSONField
 from django.contrib import admin
@@ -50,7 +48,7 @@ class CategoryForProductInLine(nested_admin.SortableHiddenMixin, nested_admin.Ne
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=({group_id},)), group_name)
             for group_id, group_name in zip(obj.s_attribute_group_id_list, obj.s_attribute_group_names_list)
         ]
-        return "нет групп атрибутов" if obj.s_attribute_group_id_list==[None] else mark_safe(
+        return "нет групп атрибутов" if obj.s_attribute_group_id_list == [None] else mark_safe(
             ', '.join(group_links_list))
 
     self_attribute_groups.short_description = 'Группы атрибутов категории'
@@ -100,7 +98,7 @@ class AttrGroupInCategoryInline(nested_admin.SortableHiddenMixin, nested_admin.N
             "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(attr_id,)), attr_name)
             for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
         ]
-        return "нет атрибутов" if obj.s_attributes_id_list==[None] else mark_safe(', '.join(attr_links_list))
+        return "нет атрибутов" if obj.s_attributes_id_list == [None] else mark_safe(', '.join(attr_links_list))
 
     self_attributes_links.short_description = 'Содержит атрибуты'
 
@@ -131,7 +129,6 @@ class AttributesInGroupInline(nested_admin.SortableHiddenMixin, nested_admin.Nes
             s_value_variants_id_list=ArrayAgg('attribute__value_list__id'),)
 
     def self_value_variants(self, obj):
-        print(obj.s_value_variants_id_list)
         value_variants_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attributevalue_change', args=(variant_id,)), variant_name)
             for variant_id, variant_name in zip(obj.s_value_variants_id_list, obj.s_value_variants_names_list)]
@@ -332,7 +329,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
                 )
             if obj.related_image.exists():
                 ProductImage.objects.bulk_create(
-                    get_related_objects_list_copies(obj.related_image.all(),'product_id', product_copy.id))
+                    get_related_objects_list_copies(obj.related_image.all(), 'product_id', product_copy.id))
             return HttpResponseRedirect(reverse('admin:products_product_change', args=(product_copy.id,)))
         return super().response_change(request, obj)
 
@@ -341,7 +338,6 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
         return queryset.annotate(product_categories_names_list=ArrayAgg('related_categories__category__name'))
 
     def list_of_product_categories_names(self, obj):
-        print(obj.product_categories_names_list)
         return "нет категорий" if obj.product_categories_names_list == [None] else mark_safe(
             ', '.join(obj.product_categories_names_list))
 
@@ -441,7 +437,6 @@ class AttributeAdmin(admin.ModelAdmin):
             s_value_variants_id_list=ArrayAgg('value_list__id'),)
 
     def self_value_variants(self, obj):
-        print(obj.s_value_variants_id_list)
         value_variants_links_list = [
             "<a href=%s>%s</a>" % (reverse('admin:products_attributevalue_change', args=(variant_id,)), variant_name)
             for variant_id, variant_name in zip(obj.s_value_variants_id_list, obj.s_value_variants_names_list)]

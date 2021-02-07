@@ -241,7 +241,8 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                delete_attributes_product_in_cat(self.instance, Category.objects.get(id=form.initial["category"]))
+                                delete_attributes_product_in_cat(self.instance, Category.objects.get(
+                                    id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
                                     form.cleaned_data["position_category"])
@@ -296,12 +297,14 @@ class CategoryCollectionForm(forms.ModelForm):
         if self.instance.id:
             for cat_id in cat_list_id_list:
                 list_for_create_items = []
-                for group in AttrGroup.objects.filter(related_categories__category__id=cat_id).only('id'):
-                    if not (ItemOfCustomOrderGroup.objects.filter(group_id=group.id,
+                for group_id in AttrGroup.objects.filter(
+                        related_categories__category__id=cat_id,
+                        related_attributes__isnull=False).values_list('id', flat=True):
+                    if not (ItemOfCustomOrderGroup.objects.filter(group_id=group_id,
                                                                   category_collection_id=self.instance.id,
                                                                   category_id=cat_id)).exists():
                         list_for_create_items.append(
-                            ItemOfCustomOrderGroup(group_id=group.id, category_collection_id=self.instance.id,
+                            ItemOfCustomOrderGroup(group_id=group_id, category_collection_id=self.instance.id,
                                                    category_id=cat_id)
                         )
                 ItemOfCustomOrderGroup.objects.bulk_create(list_for_create_items)
