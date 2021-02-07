@@ -289,16 +289,6 @@ class AttrGroup(models.Model):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attrgroup_change', args=(self.id,)), self.name)
         return mark_safe(link)
 
-    # def self_attributes_links(self):
-    #     links = [
-    #         "<a href=%s>%s</a>" % (reverse('admin:products_attribute_change', args=(i.attribute_id,)), i.attribute.name)
-    #         for i in self.related_attributes.all().order_by('position')
-    #     ]
-    #     return mark_safe(', '.join(links))
-    #
-    # self_attributes_links.short_description = 'Содержит атрибуты'
-    # self_attributes_links = property(self_attributes_links)
-
 
 TYPE_OF_VALUE = (
     (1, "Текст"),
@@ -345,16 +335,6 @@ class Attribute(models.Model):
     def get_link(self):
         link = "<a href={}>{}</a>".format(reverse('admin:products_attribute_change', args=(self.id,)), self.name)
         return mark_safe(link)
-
-    def self_value_variants(self):
-        ls = [
-            f"<a href={reverse('admin:products_attributevalue_change', args=(i.id,))}>{i}</a>"
-            for i in self.value_list.all()
-        ]
-        return mark_safe(', '.join(ls))
-
-    self_value_variants.short_description = 'Список значений '
-    self_value_variants = property(self_value_variants)
 
 
 class AttributeValue(models.Model):

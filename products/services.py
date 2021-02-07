@@ -5,6 +5,30 @@ from django.utils.safestring import mark_safe
 from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, ProductInCategory)
 
 
+def save_and_make_copy(objct, model_to_copy):
+    objct.save()
+    objct_copy = copy.copy(objct)
+    objct_copy.id = None
+    objct_copy.slug = None
+    copies = [0]
+    for atr in model_to_copy.objects.filter(name__startswith=objct.name + ' (@копия #'):
+        left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
+        number_of_copy = int(left_part_name[:left_part_name.find(')')])
+        copies.append(number_of_copy)
+    objct_copy.name = objct.name + ' (@копия #%s)' % (max(copies) + 1)
+    return objct_copy
+
+
+def get_related_objects_list_copies(related_objects, related_field_name, obj_copy):
+    related_objects_copies_list = []
+    for related_objects_item in related_objects:
+        copy_related_objects_item = copy.copy(related_objects_item)
+        copy_related_objects_item.id = None
+        copy_related_objects_item.__dict__[related_field_name] = obj_copy
+        related_objects_copies_list.append(copy_related_objects_item)
+    return related_objects_copies_list
+
+
 def get_and_save_product_pos_in_cat(form, position):
     product_in_cat_item = form.save(commit=False)
     product_in_cat_item.position_product = position
