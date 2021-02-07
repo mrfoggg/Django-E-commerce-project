@@ -175,25 +175,6 @@ class Product(models.Model):
     def sorted_mini_attributes(self):
         return self.get_sorted_addict_attr(self.mini_parameters_structure)
 
-    # @staticmethod
-    # def get_addict_attributes_data_value_strings(attrs_data_obj_sorted_list):
-    #     return mark_safe('<br>'.join([
-    #         "%s-%s" % (attr_data.name,
-    #                    ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str)
-    #         for attr_data in attrs_data_obj_sorted_list]))
-
-    # def get_shot_parameters_admin_field(self):
-    #     return self.get_addict_attributes_data_value_strings(self.sorted_shot_attributes)
-    #
-    # get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
-    # get_shot_parameters_admin_field = property(get_shot_parameters_admin_field)
-    #
-    # def get_mini_parameters_admin_field(self):
-    #     return self.get_addict_attributes_data_value_strings(self.sorted_mini_attributes)
-    #
-    # get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
-    # get_mini_parameters_admin_field = property(get_mini_parameters_admin_field)
-
 
 class ProductImage(models.Model):
     name = models.CharField(max_length=128, blank=True, default='', db_index=True, verbose_name='Название')
