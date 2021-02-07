@@ -128,6 +128,7 @@ class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admi
     sortable_field_name = "position"
     ordering = ('position',)
     extra = 0
+
     # can_delete = False
 
     # def has_add_permission(self, request, obj=None):
@@ -147,6 +148,7 @@ class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admi
             for attr_id, attr_name in zip(obj.s_attributes_id_list, obj.s_attributes_names_list)
         ]
         return mark_safe(', '.join(attr_links_list))
+
     self_attributes_links.short_description = 'Содержит атрибуты'
 
 
@@ -337,23 +339,26 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
 
     def list_of_product_categories_names(self, obj):
         return mark_safe(', '.join(obj.product_categories_names_list))
+
     list_of_product_categories_names.short_description = "Категории в которые входит товар"
 
     @staticmethod
     def get_addict_attributes_data_value_strings(attrs_data_obj_sorted_list):
         return mark_safe('<br>'.join([
-            "%s-%s" % (attr_data.name,
-                       ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str)
+            "%s - %s" % (
+                attr_data.name,
+                ', '.join(attr_data.value_str) if isinstance(attr_data.value_str, list) else attr_data.value_str)
             for attr_data in attrs_data_obj_sorted_list]))
 
     def get_shot_parameters_admin_field(self, obj):
         return self.get_addict_attributes_data_value_strings(obj.sorted_shot_attributes)
+
     get_shot_parameters_admin_field.short_description = "Краткие характеристики товара"
 
     def get_mini_parameters_admin_field(self, obj):
         return self.get_addict_attributes_data_value_strings(obj.sorted_mini_attributes)
-    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
 
+    get_mini_parameters_admin_field.short_description = "Характеристики на выдаче категории"
 
 
 @admin.register(Country)
@@ -380,8 +385,14 @@ class AttrGroupAdmin(nested_admin.NestedModelAdmin):
         if "_save_copy" in request.POST:
             group_copy = save_and_make_copy(obj, AttrGroup)
             group_copy.save()
-            for atr in Attribute.objects.filter(related_groups__group=obj):
-                AttributesInGroup.objects.create(group=group_copy, attribute=atr)
+            if obj.related_attributes.exists():
+                attr_in_group_copy_list = []
+                for attr_in_group_item in obj.related_attributes.all():
+                    copy_attr_in_group_item = copy.copy(attr_in_group_item)
+                    copy_attr_in_group_item.id = None
+                    copy_attr_in_group_item.group = group_copy
+                    attr_in_group_copy_list.append(copy_attr_in_group_item)
+                AttributesInGroup.objects.bulk_create(attr_in_group_copy_list)
             return HttpResponseRedirect(reverse('admin:products_attrgroup_change', args=(group_copy.id,)))
         return super().response_change(request, obj)
 

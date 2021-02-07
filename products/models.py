@@ -45,7 +45,6 @@ class Category(MPTTModel):
         level_attr = 'mptt_level'
         order_insertion_by = ['name']
 
-
     @property
     def getlink(self):
         link = "<a href=%s>%s</a>" % (reverse('admin:products_category_change', args=(self.id,)), self.name)
@@ -249,12 +248,12 @@ class ProductInCategory(models.Model):
         category = Category.objects.filter(id=self.category_id).values_list('name', flat=True)[0]
         return f'"{category}" - {name}'
 
-
     def delete_attributes(self):
         category_id = str(self.category_id)
         if category_id in self.product.parameters_structure.keys():
             self.product.parameters_structure.pop(category_id)
-        for group in AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id', flat=True):
+        for group in AttrGroup.objects.filter(related_categories__category=self.category_id).values_list('id',
+                                                                                                         flat=True):
             group_id = str(group)
             for atr in Attribute.objects.filter(related_groups__group=group_id).only('id'):
                 atr_id = str(atr.id)

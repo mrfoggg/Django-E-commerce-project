@@ -81,21 +81,6 @@ class CategoryInProductFormActions:
             raise ValidationError('Ошибка, в категориях дублируются группы атрибутов: "%s"' % mark_safe(
                 ', '.join(map(lambda x: x.name, coincidences_list))))
 
-    @staticmethod
-    def delete_attributes(product, category):
-        product.description += f'Удалена категория {category} <br>'
-        category_id = str(category.id)
-        if category_id in product.shot_parameters_structure.keys():
-            product.shot_parameters_structure.pop(category_id)
-        if category_id in product.mini_parameters_structure.keys():
-            product.mini_parameters_structure.pop(category_id)
-        if str(category.id) in product.parameters_structure.keys():
-            product.parameters_structure.pop(str(category.id))
-
-        for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
-            for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
-                if (full_id := f'{group_id}-{atr_id}') in product.parameters:
-                    product.parameters.pop(full_id)
 
     @staticmethod
     def add_attributes(product, category, position_category):
@@ -178,3 +163,19 @@ class CategoryInProductFormActions:
 
     def _should_delete_form(self, form):
         self._should_delete_form(form)
+
+
+def delete_attributes_product_in_cat(product, category):
+    product.description += f'Удалена категория {category} <br>'
+    if (category_id := str(category.id)) in product.parameters_structure.keys():
+        product.parameters_structure.pop(category_id)
+        if category_id in product.shot_parameters_structure.keys():
+            product.shot_parameters_structure.pop(category_id)
+        if category_id in product.mini_parameters_structure.keys():
+            product.mini_parameters_structure.pop(category_id)
+
+    for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
+        for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
+            if (full_id := f'{group_id}-{atr_id}') in product.parameters:
+                product.parameters.pop(full_id)
+    return product

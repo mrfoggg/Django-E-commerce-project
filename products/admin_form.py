@@ -7,7 +7,8 @@ from django.forms import HiddenInput, NumberInput, TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
-from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
+from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values, \
+    delete_attributes_product_in_cat
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -54,7 +55,8 @@ class ProductAttributesField(forms.MultiValueField):
 
             if mode == "standard":
                 for cat_id_str, value_cat in sorted(parameters_structure.items(), key=lambda x: x[1]['cat_position']):
-                    for gr_id_str, gr_val in sorted(value_cat["groups_attributes"].items(), key=lambda x: x[1]['group_position']):
+                    for gr_id_str, gr_val in sorted(
+                            value_cat["groups_attributes"].items(), key=lambda x: x[1]['group_position']):
                         group_cat_attrlist_sorted_id = sorted_group_struct(
                             cat_id_str, gr_id_str,
                             sorted_list_of_attr_id := [
@@ -224,7 +226,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
             category_set_changed = False
             for form in self.forms:
                 if self.can_delete and self._should_delete_form(form):
-                    self.delete_attributes(self.instance, form.cleaned_data['category'])
+                    delete_attributes_product_in_cat(self.instance, form.cleaned_data['category'])
                     category_set_changed = True
                     continue
                 else:
@@ -239,7 +241,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                self.delete_attributes(self.instance, Category.objects.get(id=form.initial["category"]))
+                                delete_attributes_product_in_cat(self.instance, Category.objects.get(id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
                                     form.cleaned_data["position_category"])
