@@ -12,7 +12,7 @@ from .admin_form import AttrGroupForm, AttributeForm, CategoriesInGroupInlineFor
 from .models import *
 from django.contrib.postgres.aggregates import ArrayAgg
 
-from .services import get_related_objects_list_copies, save_and_make_copy
+from .services import get_related_objects_list_copies, save_and_make_copy, del_attrs_when_delcat_from_prod
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -269,6 +269,14 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
 
     self_attribute_groups.short_description = "Группыы атрибутов категории--"
 
+    def delete_model(self, request, obj):
+        Product.objects.bulk_update([
+            del_attrs_when_delcat_from_prod(product, obj)
+            for product in Product.objects.filter(
+                related_categories__category_id=obj.id).only('parameters', 'parameters_structure')],
+            ['parameters', 'parameters_structure'])
+        obj.delete()
+
 
 @admin.register(Product)
 class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
@@ -444,6 +452,7 @@ class AttributeAdmin(admin.ModelAdmin):
             ', '.join(value_variants_links_list))
 
     self_value_variants.short_description = "Варианты значений"
+
 
 
 @admin.register(AttributeValue)

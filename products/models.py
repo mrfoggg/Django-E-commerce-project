@@ -9,20 +9,7 @@ from mptt.models import MPTTModel
 from .utils import get_unique_slug
 
 
-def delete_attributes_product_in_cat(product, category):
-    product.description += f'Удалена категория {category} <br>'
-    if (category_id := str(category.id)) in product.parameters_structure.keys():
-        product.parameters_structure.pop(category_id)
-        if category_id in product.shot_parameters_structure.keys():
-            product.shot_parameters_structure.pop(category_id)
-        if category_id in product.mini_parameters_structure.keys():
-            product.mini_parameters_structure.pop(category_id)
 
-    for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
-        for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
-            if (full_id := f'{group_id}-{atr_id}') in product.parameters:
-                product.parameters.pop(full_id)
-    return product
 
 
 class Category(MPTTModel):
@@ -44,17 +31,15 @@ class Category(MPTTModel):
     def __str__(self):
         return self.name
 
-    def delete(self, *args, **kwargs):
-        # for prod in self.related_products.all():
-        #     prod.delete_attributes()
-        Product.objects.bulk_update(
-            [
-                delete_attributes_product_in_cat(product, self)
-                for product in Product.objects.filter(related_categories__category_id=self.id).only('parameters', 'parameters_structure')
-            ],
-            ['parameters', 'parameters_structure']
-        )
-        super().delete(*args, **kwargs)
+    # def delete(self, *args, **kwargs):
+    #     # for prod in self.related_products.all():
+    #     #     prod.delete_attributes()
+    #     Product.objects.bulk_update([
+    #             del_attrs_when_delcat_from_prod(product, self)
+    #             for product in Product.objects.filter(
+    #                 related_categories__category_id=self.id).only('parameters', 'parameters_structure')],
+    #         ['parameters', 'parameters_structure'])
+    #     super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         if not self.slug:

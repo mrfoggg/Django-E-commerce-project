@@ -5,6 +5,22 @@ from django.utils.safestring import mark_safe
 from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, ProductInCategory
 
 
+def del_attrs_when_delcat_from_prod(product, category):
+    product.description += f'Удалена категория {category} <br>'
+    if (category_id := str(category.id)) in product.parameters_structure.keys():
+        product.parameters_structure.pop(category_id)
+        if category_id in product.shot_parameters_structure.keys():
+            product.shot_parameters_structure.pop(category_id)
+        if category_id in product.mini_parameters_structure.keys():
+            product.mini_parameters_structure.pop(category_id)
+
+    for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
+        for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
+            if (full_id := f'{group_id}-{atr_id}') in product.parameters:
+                product.parameters.pop(full_id)
+    return product
+
+
 def save_and_make_copy(objct, model_to_copy):
     objct.save()
     objct_copy = copy.copy(objct)

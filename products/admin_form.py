@@ -5,10 +5,10 @@ from django.db.models import Count
 from django.forms import HiddenInput, NumberInput, TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product, \
-    delete_attributes_product_in_cat
+from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
 
-from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values
+from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values, \
+    del_attrs_when_delcat_from_prod
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -226,7 +226,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
             category_set_changed = False
             for form in self.forms:
                 if self.can_delete and self._should_delete_form(form):
-                    delete_attributes_product_in_cat(self.instance, form.cleaned_data['category'])
+                    del_attrs_when_delcat_from_prod(self.instance, form.cleaned_data['category'])
                     category_set_changed = True
                     continue
                 else:
@@ -241,7 +241,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                delete_attributes_product_in_cat(self.instance, Category.objects.get(
+                                del_attrs_when_delcat_from_prod(self.instance, Category.objects.get(
                                     id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
