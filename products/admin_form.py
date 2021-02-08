@@ -298,8 +298,9 @@ class CategoryCollectionForm(forms.ModelForm):
                             group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
                         for group_id in AttrGroup.objects.filter(
                             related_categories__category_id=cat_id,
-                            ).values_list('id', flat=True)
-                        if AttrGroup.objects.get(id=group_id).related_attributes.exists()])
+                            ).exclude(related_attributes=None).values_list('id', flat=True)
+                        if not ItemOfCustomOrderGroup.objects.filter(
+                            group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id).exists()])
             new_set = set(cat_list_id_list)
             old_set = set(Category.objects.filter().values_list('id', flat=True))
             if old_set != new_set:

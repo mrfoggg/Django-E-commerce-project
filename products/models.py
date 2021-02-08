@@ -6,8 +6,6 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from mptt.fields import TreeForeignKey, TreeManyToManyField
 from mptt.models import MPTTModel
-# from .services import delete_attributes_product_in_cat
-
 from .utils import get_unique_slug
 
 
