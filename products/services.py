@@ -2,37 +2,52 @@ import copy
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Max
 from django.utils.safestring import mark_safe
-from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, ProductInCategory
+from collections import namedtuple
+from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, Product, \
+    ProductInCategory
 
 
-def del_attrs_when_delcat_from_prod(product, category):
-    product.description += f'Удалена категория {category} <br>'
-    if (category_id := str(category.id)) in product.parameters_structure.keys():
-        product.parameters_structure.pop(category_id)
-        if category_id in product.shot_parameters_structure.keys():
-            product.shot_parameters_structure.pop(category_id)
-        if category_id in product.mini_parameters_structure.keys():
-            product.mini_parameters_structure.pop(category_id)
+def remove_attr_data_from_products(product=None, category=None):
+    if product:
+        products_list = [product]
+    else:
+        products_list = Product.objects.filter(
+            related_categories__category=category).only(
+            'parameters', 'parameters_structure', 'shot_parameters_structure', 'mini_parameters_structure')
+    all_data_products_to_update_type = namedtuple('all_data_to_update_type', 'products_list fields_names_list')
+    all_data_products_to_update = all_data_products_to_update_type([], []) #первый элемент лучше список второй множество
+    for product in products_list:
+        if (category_id := str(category.id)) in product.parameters_structure.keys():
+            product.parameters_structure.pop(category_id)
+            all_data_products_to_update.fields_names_list.append('parameters_structure')
+            all_data_products_to_update.fields_names_list.append('parameters')
+            if category_id in product.shot_parameters_structure.keys():
+                product.shot_parameters_structure.pop(category_id)
+                all_data_products_to_update.fields_names_list.append('shot_parameters_structure')
+            if category_id in product.mini_parameters_structure.keys():
+                product.mini_parameters_structure.pop(category_id)
+                all_data_products_to_update.fields_names_list.append('mini_parameters_structure')
 
-    for group_id in AttrGroup.objects.filter(related_categories__category=category.id).values_list('id', flat=True):
-        for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
-            if (full_id := f'{group_id}-{atr_id}') in product.parameters:
-                product.parameters.pop(full_id)
-    return product
+        for group_id in AttrGroup.objects.filter(related_categories__category=category).values_list('id', flat=True):
+            for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
+                if (full_id := f'{group_id}-{atr_id}') in product.parameters:
+                    product.parameters.pop(full_id)
+        all_data_products_to_update.products_list.append(product)
+    return all_data_products_to_update
 
 
-def save_and_make_copy(objct, model_to_copy):
-    objct.save()
-    objct_copy = copy.copy(objct)
-    objct_copy.id = None
-    objct_copy.slug = None
+def save_and_make_copy(obj, model_to_copy):
+    obj.save()
+    obj_copy = copy.copy(obj)
+    obj_copy.id = None
+    obj_copy.slug = None
     copies = [0]
-    for atr in model_to_copy.objects.filter(name__startswith=objct.name + ' (@копия #'):
+    for atr in model_to_copy.objects.filter(name__startswith=obj.name + ' (@копия #'):
         left_part_name = atr.name[(atr.name.find(' (@копия #') + 10):]
         number_of_copy = int(left_part_name[:left_part_name.find(')')])
         copies.append(number_of_copy)
-    objct_copy.name = objct.name + ' (@копия #%s)' % (max(copies) + 1)
-    return objct_copy
+    obj_copy.name = obj.name + ' (@копия #%s)' % (max(copies) + 1)
+    return obj_copy
 
 
 def get_related_objects_list_copies(related_objects, related_field_name, obj_copy):
@@ -168,7 +183,7 @@ class CategoryInProductFormActions:
                 'cat_position': position_category, 'attributes':
                     build_custom_attributes_structure_field_data(this_category_mini_attributes)}
         next_position = 0 if (max_pos := product_in_cat_qs['position_product__max']) is None else max_pos + 1
-        return next_position
+        return next_position if product else 'all_data_products_to_update'
 
     @staticmethod
     def reorder_attributes(product, category_id, new_category_order):
@@ -199,6 +214,3 @@ class CategoryInProductFormActions:
 
     def _should_delete_form(self, form):
         self._should_delete_form(form)
-
-
-

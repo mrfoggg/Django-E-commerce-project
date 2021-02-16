@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
 
 from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values, \
-    del_attrs_when_delcat_from_prod
+    remove_attr_data_from_products
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -226,7 +226,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
             category_set_changed = False
             for form in self.forms:
                 if self.can_delete and self._should_delete_form(form):
-                    del_attrs_when_delcat_from_prod(self.instance, form.cleaned_data['category'])
+                    remove_attr_data_from_products(self.instance, form.cleaned_data['category'])
                     category_set_changed = True
                     continue
                 else:
@@ -241,7 +241,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
 
                         else:
                             if 'category' in form.changed_data:
-                                del_attrs_when_delcat_from_prod(self.instance, Category.objects.get(
+                                remove_attr_data_from_products(self.instance, Category.objects.get(
                                     id=form.initial["category"]))
                                 product_position = self.add_attributes(
                                     self.instance, form.cleaned_data["category"],
@@ -251,7 +251,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                             else:
                                 self.reorder_attributes(self.instance, form.initial["category"],
                                                         form.cleaned_data["position_category"])
-
+# не факт что при первом условии что либо нужно делать вообще, в общем пересмотреть
             if not not_should_delete_forms_more_than_one and total_form_count > 1:
                 self.instance.category_collection_id = None
                 self.instance.custom_order_group = []

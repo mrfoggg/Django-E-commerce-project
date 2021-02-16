@@ -1,6 +1,7 @@
 import nested_admin
 # from django.db.models import Subquery, OuterRef, JSONField
 from django.contrib import admin
+from django.contrib.admin.actions import delete_selected
 from django.http import HttpResponseRedirect
 
 from django_summernote.admin import SummernoteModelAdmin
@@ -12,7 +13,8 @@ from .admin_form import AttrGroupForm, AttributeForm, CategoriesInGroupInlineFor
 from .models import *
 from django.contrib.postgres.aggregates import ArrayAgg
 
-from .services import get_related_objects_list_copies, save_and_make_copy, del_attrs_when_delcat_from_prod
+from .services import get_related_objects_list_copies, save_and_make_copy, remove_attr_data_from_products
+from django.utils.encoding import force_str
 
 
 class ProductImageInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
@@ -269,12 +271,41 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
 
     self_attribute_groups.short_description = "Группыы атрибутов категории--"
 
+    def delete_selected_tree(self, modeladmin, request, queryset):
+        """
+        Deletes multiple instances and makes sure the MPTT fields get
+        recalculated properly. (Because merely doing a bulk delete doesn't
+        trigger the post_delete hooks.)
+        """
+        # If this is True, the confirmation page has been displayed
+        if request.POST.get("post"):
+            print(f'delete_selected queryset - {queryset}')
+            n = 0
+            with queryset.model._tree_manager.delay_mptt_updates():
+                for obj in queryset:
+                    if self.has_delete_permission(request, obj):
+                        obj_display = force_str(obj)
+                        self.log_deletion(request, obj, obj_display)
+                        self.delete_model(request, obj)
+                        n += 1
+            self.message_user(
+                request, "Успешно удалено %(count)d узлов." % {"count": n}
+            )
+            # Return None to display the change list page again
+            return None
+        else:
+            # (ab)using the built-in action to display the confirmation page
+            return delete_selected(self, request, queryset)
+
     def delete_model(self, request, obj):
-        Product.objects.bulk_update([
-            del_attrs_when_delcat_from_prod(product, obj)
-            for product in Product.objects.filter(
-                related_categories__category_id=obj.id).only('parameters', 'parameters_structure')],
-            ['parameters', 'parameters_structure'])
+        print(f'DELETE CAT - {obj}')
+        # Перебрать коллекции категорий. Если при отвязке категории коллекция с остается с менее чем двумя категориями
+        # или коллекция с уменьшенным набором уже существует то коллекцию удалить. Иначе у коллекции удалить айтемы
+        # групп атрибутов связанные с удаленной категорией. В функцию remove_attr_data_from_products передать список
+        # из двух элементов: список удаленных коллекций и список модифицированных коллекций.
+
+        all_data_to_update = remove_attr_data_from_products(category=obj)
+        Product.objects.bulk_update(all_data_to_update.products_list, all_data_to_update.fields_names_list)
         obj.delete()
 
 
