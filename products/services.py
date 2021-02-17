@@ -7,7 +7,12 @@ from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, Cat
     ProductInCategory
 
 
-def remove_attr_data_from_products(product=None, category=None):
+def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
+    if category and not (product or attr_group or attr):
+        cc = CategoryCollection.objects.annotate(
+            cnt_categories=Count('category_list')).filter(
+            category_list=category, cnt_categories=2).delete()
+        print(cc)
     if product:
         products_list = [product]
     else:

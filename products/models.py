@@ -9,9 +9,6 @@ from mptt.models import MPTTModel
 from .utils import get_unique_slug
 
 
-
-
-
 class Category(MPTTModel):
     name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')

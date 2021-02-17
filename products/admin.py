@@ -305,7 +305,8 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
         # из двух элементов: список удаленных коллекций и список модифицированных коллекций.
 
         all_data_to_update = remove_attr_data_from_products(category=obj)
-        Product.objects.bulk_update(all_data_to_update.products_list, all_data_to_update.fields_names_list)
+        if all_data_to_update.products_list != [] and all_data_to_update.fields_names_list != []:
+            Product.objects.bulk_update(all_data_to_update.products_list, all_data_to_update.fields_names_list)
         obj.delete()
 
 
