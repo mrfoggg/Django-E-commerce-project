@@ -219,8 +219,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
     def clean(self):
         super().clean()
         if self.has_changed():
-            total_form_count = self.total_form_count()
-            if (not_should_delete_forms_more_than_one := total_form_count - len(self.deleted_forms)) > 1:
+            if (total_form_count := self.total_form_count()) - (cat_to_del_cnt := len(self.deleted_forms)) > 1:
                 self.group_duplicate_check()
             new_category_set = set()
             category_set_changed = False
@@ -230,7 +229,7 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                     category_set_changed = True
                     continue
                 else:
-                    if not_should_delete_forms_more_than_one:
+                    if total_form_count - cat_to_del_cnt:
                         new_category_set.add(form.cleaned_data['category'].id)
                     if form.has_changed():
                         if form.initial == {}:
@@ -251,12 +250,12 @@ class CategoryForProductInLineFormSet(forms.models.BaseInlineFormSet, CategoryIn
                             else:
                                 self.reorder_attributes(self.instance, form.initial["category"],
                                                         form.cleaned_data["position_category"])
-# не факт что при первом условии что либо нужно делать вообще, в общем пересмотреть
-            if not not_should_delete_forms_more_than_one and total_form_count > 1:
-                self.instance.category_collection_id = None
-                self.instance.custom_order_group = []
-            else:
-                if (not self.instance.id or category_set_changed) and not_should_delete_forms_more_than_one:
+            if total_form_count > 1:
+                if total_form_count - cat_to_del_cnt <= 1:
+                    print('DEL CAT COLLECTION')
+                    self.instance.category_collection_id = None
+                    self.instance.custom_order_group = []
+                elif category_set_changed:
                     self.add_category_collection(self.instance, new_category_set)
 
 
