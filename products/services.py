@@ -10,37 +10,47 @@ from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, Cat
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
     if category and not (product or attr_group or attr):
+        mode = 'delete_category'
+    if mode == 'delete_category':
+        list_of_changed_collections_type = namedtuple('list_of_changed_collections_type', 'deleted modified')
+        list_of_changed_collections = list_of_changed_collections_type([], [])
         for collection in CategoryCollection.objects.annotate(cat_id_list=ArrayAgg('category_list')).filter(
                 category_list=category):
             if len(collection.cat_id_list) == 2:
+                list_of_changed_collections.deleted.append(collection.id)
                 collection.delete()
             else:
                 other_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
-                    cnt=len(collection.cat_id_list))
+                    cnt=len(collection.cat_id_list)-1).exclude(id=collection.id)
                 for cat in collection.cat_id_list:
+                    if cat == category.id:
+                        continue
                     other_collection = other_collection.filter(category_list=cat)
                 if other_collection.exists():
+                    list_of_changed_collections.deleted.append(collection.id)
                     collection.delete()
+                else:
+                    list_of_changed_collections.modified.append(collection.id)
+        print(list_of_changed_collections)
     if product:
         products_list = [product]
     else:
         products_list = Product.objects.filter(
             related_categories__category=category).only(
             'parameters', 'parameters_structure', 'shot_parameters_structure', 'mini_parameters_structure')
-    all_data_products_to_update_type = namedtuple('all_data_to_update_type', 'products_list fields_names_list')
-    all_data_products_to_update = all_data_products_to_update_type([],
-                                                                   [])  # первый элемент лучше список второй множество
+    all_data_products_to_update_type = namedtuple('all_data_products_to_update_type', 'products_list fields_names_set')
+    all_data_products_to_update = all_data_products_to_update_type([], {})
     for product in products_list:
         if (category_id := str(category.id)) in product.parameters_structure.keys():
             product.parameters_structure.pop(category_id)
-            all_data_products_to_update.fields_names_list.append('parameters_structure')
-            all_data_products_to_update.fields_names_list.append('parameters')
+            all_data_products_to_update.fields_names_set.append('parameters_structure')
+            all_data_products_to_update.fields_names_set.append('parameters')
             if category_id in product.shot_parameters_structure.keys():
                 product.shot_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_list.append('shot_parameters_structure')
+                all_data_products_to_update.fields_names_set.append('shot_parameters_structure')
             if category_id in product.mini_parameters_structure.keys():
                 product.mini_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_list.append('mini_parameters_structure')
+                all_data_products_to_update.fields_names_set.append('mini_parameters_structure')
 
         for group_id in AttrGroup.objects.filter(related_categories__category=category).values_list('id', flat=True):
             for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
