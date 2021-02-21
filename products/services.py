@@ -43,14 +43,22 @@ def remove_attr_data_from_products(product=None, category=None, attr_group=None,
     for product in products_list:
         if (category_id := str(category.id)) in product.parameters_structure.keys():
             product.parameters_structure.pop(category_id)
-            all_data_products_to_update.fields_names_set.append('parameters_structure')
-            all_data_products_to_update.fields_names_set.append('parameters')
+            all_data_products_to_update.fields_names_set.update({'parameters_structure'})
+            all_data_products_to_update.fields_names_set.update({'parameters'})
             if category_id in product.shot_parameters_structure.keys():
                 product.shot_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_set.append('shot_parameters_structure')
+                all_data_products_to_update.fields_names_set.update({'shot_parameters_structure'})
             if category_id in product.mini_parameters_structure.keys():
                 product.mini_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_set.append('mini_parameters_structure')
+                all_data_products_to_update.fields_names_set.update({'mini_parameters_structure'})
+            if product.category_collection_id in list_of_changed_collections.deleted:
+                product.custom_order_group = []
+                all_data_products_to_update.fields_names_set.update({'custom_order_group'})
+            if product.category_collection_id in list_of_changed_collections.modified:
+                for i, cat_and_group in enumerate(product.custom_order_group):
+                    if cat_and_group[0] == category.id:
+                        product.custom_order_group[i].pop()
+                        all_data_products_to_update.fields_names_set.update({'custom_order_group'})
 
         for group_id in AttrGroup.objects.filter(related_categories__category=category).values_list('id', flat=True):
             for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
