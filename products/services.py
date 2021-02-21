@@ -1,6 +1,7 @@
 import copy
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Max
+from django.db.models import Count, F, Max, Subquery, OuterRef, Q
 from django.utils.safestring import mark_safe
 from collections import namedtuple
 from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, Product, \
@@ -9,10 +10,17 @@ from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, Cat
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
     if category and not (product or attr_group or attr):
-        cc = CategoryCollection.objects.annotate(
-            cnt_categories=Count('category_list')).filter(
-            category_list=category, cnt_categories=2).delete()
-        print(cc)
+        for collection in CategoryCollection.objects.annotate(cat_id_list=ArrayAgg('category_list')).filter(
+                category_list=category):
+            if len(collection.cat_id_list) == 2:
+                collection.delete()
+            else:
+                other_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
+                    cnt=len(collection.cat_id_list))
+                for cat in collection.cat_id_list:
+                    other_collection = other_collection.filter(category_list=cat)
+                if other_collection.exists():
+                    collection.delete()
     if product:
         products_list = [product]
     else:
@@ -20,7 +28,8 @@ def remove_attr_data_from_products(product=None, category=None, attr_group=None,
             related_categories__category=category).only(
             'parameters', 'parameters_structure', 'shot_parameters_structure', 'mini_parameters_structure')
     all_data_products_to_update_type = namedtuple('all_data_to_update_type', 'products_list fields_names_list')
-    all_data_products_to_update = all_data_products_to_update_type([], []) #первый элемент лучше список второй множество
+    all_data_products_to_update = all_data_products_to_update_type([],
+                                                                   [])  # первый элемент лучше список второй множество
     for product in products_list:
         if (category_id := str(category.id)) in product.parameters_structure.keys():
             product.parameters_structure.pop(category_id)
