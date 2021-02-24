@@ -306,7 +306,8 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
 
         all_data_to_update = remove_attr_data_from_products(category=obj)
         if all_data_to_update.products_list != [] and all_data_to_update.fields_names_list != []:
-            Product.objects.bulk_update(all_data_to_update.products_list, list(all_data_to_update.fields_names_set))
+            Product.objects.bulk_update(all_data_to_update.products_list, list(
+                set(all_data_to_update.fields_names_list)))
         obj.delete()
 
 

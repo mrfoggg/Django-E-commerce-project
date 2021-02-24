@@ -9,62 +9,89 @@ from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, Cat
 
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
+    mode = None
+    list_of_deleted_collections, list_of_modified_collections, replaced_collection_dict = [], [], {}
     if category and not (product or attr_group or attr):
         mode = 'delete_category'
     if mode == 'delete_category':
-        list_of_changed_collections_type = namedtuple('list_of_changed_collections_type', 'deleted modified')
-        list_of_changed_collections = list_of_changed_collections_type([], [])
         for collection in CategoryCollection.objects.annotate(cat_id_list=ArrayAgg('category_list')).filter(
                 category_list=category):
+            # удаляем коллекцию если остается одна категория, сохранеяем ее в списке удаленных чтобы в связанных товарах
+            # custom_order_group сделать пустым
             if len(collection.cat_id_list) == 2:
-                list_of_changed_collections.deleted.append(collection.id)
+                list_of_deleted_collections.append(collection.id)
                 collection.delete()
             else:
+            # находим коллекции которые совпадают с этой укороченной
                 other_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
                     cnt=len(collection.cat_id_list)-1).exclude(id=collection.id)
                 for cat in collection.cat_id_list:
                     if cat == category.id:
                         continue
                     other_collection = other_collection.filter(category_list=cat)
+            # помечаем эту коллекцию на удаление и в replaced_collection_dict записываем id коллекции
+            # на какую ее поменять для свазанных товаров (и с какой взять custom_order_group
                 if other_collection.exists():
-                    list_of_changed_collections.deleted.append(collection.id)
-                    collection.delete()
+                    replaced_collection_dict[collection.id] = other_collection[0].id
+                    # collection.delete()
                 else:
-                    list_of_changed_collections.modified.append(collection.id)
-        print(list_of_changed_collections)
+            # если коллекцию не удалили то помечаем ее как модифицированую чтобы для связаных товаров
+            # обновить custom_order_group согласно изменений в коллекции
+                    list_of_modified_collections.append(collection.id)
+        print(list_of_deleted_collections)
+        print(replaced_collection_dict)
+        print(list_of_modified_collections)
+
     if product:
         products_list = [product]
     else:
         products_list = Product.objects.filter(
             related_categories__category=category).only(
             'parameters', 'parameters_structure', 'shot_parameters_structure', 'mini_parameters_structure')
-    all_data_products_to_update_type = namedtuple('all_data_products_to_update_type', 'products_list fields_names_set')
-    all_data_products_to_update = all_data_products_to_update_type([], {})
+    all_data_products_to_update_type = namedtuple('all_data_products_to_update_type', 'products_list fields_names_list')
+    all_data_products_to_update = all_data_products_to_update_type([], [])
     for product in products_list:
         if (category_id := str(category.id)) in product.parameters_structure.keys():
             product.parameters_structure.pop(category_id)
-            all_data_products_to_update.fields_names_set.update({'parameters_structure'})
-            all_data_products_to_update.fields_names_set.update({'parameters'})
-            if category_id in product.shot_parameters_structure.keys():
-                product.shot_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_set.update({'shot_parameters_structure'})
-            if category_id in product.mini_parameters_structure.keys():
-                product.mini_parameters_structure.pop(category_id)
-                all_data_products_to_update.fields_names_set.update({'mini_parameters_structure'})
-            if product.category_collection_id in list_of_changed_collections.deleted:
+            all_data_products_to_update.fields_names_list.append('parameters_structure')
+            all_data_products_to_update.fields_names_list.append('parameters')
+        if category_id in product.shot_parameters_structure.keys():
+            product.shot_parameters_structure.pop(category_id)
+            all_data_products_to_update.fields_names_list.append('shot_parameters_structure')
+        if category_id in product.mini_parameters_structure.keys():
+            product.mini_parameters_structure.pop(category_id)
+            all_data_products_to_update.fields_names_list.append('mini_parameters_structure')
+        if mode == 'delete_category':
+            if product.category_collection_id in list_of_deleted_collections:
                 product.custom_order_group = []
-                all_data_products_to_update.fields_names_set.update({'custom_order_group'})
-            if product.category_collection_id in list_of_changed_collections.modified:
+            if product.category_collection_id in replaced_collection_dict:
+                print(f'коллекция {product.category_collection_id} заменена на {replaced_collection_dict[product.category_collection_id]}')
+                product.category_collection_id = replaced_collection_dict[product.category_collection_id]
+                product.custom_order_group = [
+                    [gr.category_id, gr.group_id] for gr in CategoryCollection.objects.get(
+                        id=product.category_collection_id).rel_group_iocog.order_by('position')]
+                all_data_products_to_update.fields_names_list.append('custom_order_group')
+                all_data_products_to_update.fields_names_list.append('category_collection')
+        if mode == 'delete_category' or mode == 'delete_group':
+            if product.category_collection_id in list_of_modified_collections:
+                # в custom_order_group удаляем отдельные элементы
                 for i, cat_and_group in enumerate(product.custom_order_group):
-                    if cat_and_group[0] == category.id:
-                        product.custom_order_group[i].pop()
-                        all_data_products_to_update.fields_names_set.update({'custom_order_group'})
-
+                    if mode == 'delete_category':
+                        if cat_and_group[0] == category.id:
+                            product.custom_order_group[i].pop()
+                            all_data_products_to_update.fields_names_list.append('custom_order_group')
+                    if mode == 'delete_group':
+                        if cat_and_group[1] == attr_group.id:
+                            product.custom_order_group[i].pop()
+                            all_data_products_to_update.fields_names_list.append('custom_order_group')
+# select_related
         for group_id in AttrGroup.objects.filter(related_categories__category=category).values_list('id', flat=True):
             for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
                 if (full_id := f'{group_id}-{atr_id}') in product.parameters:
                     product.parameters.pop(full_id)
         all_data_products_to_update.products_list.append(product)
+# удалить замененные коллекции
+    CategoryCollection.objects.filter(id__in=replaced_collection_dict).delete()
     return all_data_products_to_update
 
 

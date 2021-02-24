@@ -279,6 +279,7 @@ class AttributeForm(forms.ModelForm):
 
 class CategoryCollectionForm(forms.ModelForm):
     def clean(self):
+        print("набор категорий изменен" if self.changed_data else "набор категорий не изменился")
         cleaned_data = super().clean()
         cat_list = cleaned_data['category_list']
         if (len_cat_list := len(cat_list)) < 2:
@@ -290,21 +291,23 @@ class CategoryCollectionForm(forms.ModelForm):
             other_same_collection = other_same_collection.filter(category_list__id=cat_id)
         if other_same_collection.exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Такой набор категорий уже определен')
-        if self.instance.id:
-            for cat_id in cat_list_id_list:
-                ItemOfCustomOrderGroup.objects.bulk_create([
-                        ItemOfCustomOrderGroup(
-                            group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
-                        for group_id in AttrGroup.objects.filter(
-                            related_categories__category_id=cat_id,
-                            ).exclude(related_attributes=None).values_list('id', flat=True)
-                        if not ItemOfCustomOrderGroup.objects.filter(
-                            group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id).exists()])
-            new_set = set(cat_list_id_list)
-            old_set = set(Category.objects.filter().values_list('id', flat=True))
-            if old_set != new_set:
-                Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
-                                                                                       custom_order_group=[])
+        if not self.instance.id:
+            self.save()
+        # if self.instance.id:
+        for cat_id in cat_list_id_list:
+            ItemOfCustomOrderGroup.objects.bulk_create([
+                    ItemOfCustomOrderGroup(
+                        group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
+                    for group_id in AttrGroup.objects.filter(
+                        related_categories__category_id=cat_id,
+                        ).exclude(related_attributes=None).values_list('id', flat=True)
+                    if not ItemOfCustomOrderGroup.objects.filter(
+                        group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id).exists()])
+        new_set = set(cat_list_id_list)
+        old_set = set(Category.objects.filter().values_list('id', flat=True))
+        if old_set != new_set:
+            Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
+                                                                                   custom_order_group=[])
         products_add = Product.objects.exclude(category_collection_id=self.instance.id).annotate(
             cnt=Count('related_categories')).filter(cnt=len_cat_list)
         for cat_id in cat_list_id_list:

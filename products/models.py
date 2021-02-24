@@ -613,19 +613,20 @@ class CategoryCollection(models.Model):
                                                                  verbose_name='Применить индивидуальный порядок мини '
                                                                               'характеристик')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        old_group_list = set(ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
-            'group_id', flat=True))
-        if self.id:
-            new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(
-                related_categories__category__in=self.category_list.all())))
-        else:
-            new_group_list = set()
-        if not old_group_list == new_group_list:
-            del_group_id = old_group_list - new_group_list
-            ItemOfCustomOrderGroup.objects.filter(group_id__in=del_group_id, category_collection=self).delete()
+    # def __init__(self, *args, **kwargs):
+    # передалаю форму и это будет реализовано там по уловию поле category_list изменено
+    # super().__init__(*args, **kwargs)
+    #
+    # old_group_list = set(ItemOfCustomOrderGroup.objects.filter(category_collection=self).values_list(
+    #     'group_id', flat=True))
+    # if self.id:
+    #     new_group_list = set(map(lambda x: x.id, AttrGroup.objects.filter(
+    #         related_categories__category__in=self.category_list.all())))
+    # else:
+    #     new_group_list = set()
+    # if not old_group_list == new_group_list:
+    #     del_group_id = old_group_list - new_group_list
+    #     ItemOfCustomOrderGroup.objects.filter(group_id__in=del_group_id, category_collection=self).delete()
 
     class Meta:
         verbose_name = "Набор категорий с индивидуальным порядком групп атрибутов"
