@@ -172,6 +172,25 @@ class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admi
     self_attributes_links.short_description = 'Содержит атрибуты'
 
 
+class ItemOfCustomOrderShotParametersInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
+    fields = ('position', 'category', 'attribute', )
+    readonly_fields = ('category', 'attribute',)
+    model = ItemOfCustomOrderShotParameters
+    formset = ItemOfCustomOrderGroupInLineFormSet
+    sortable_field_name = "position"
+    ordering = ('position',)
+    extra = 0
+
+class ItemOfCustomOrderMiniParametersInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
+    fields = ('position', 'category', 'attribute', )
+    readonly_fields = ('category', 'attribute',)
+    model = ItemOfCustomOrderMiniParameters
+    formset = ItemOfCustomOrderGroupInLineFormSet
+    sortable_field_name = "position"
+    ordering = ('position',)
+    extra = 0
+
+
 class ShotParametersOfProductInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
     fields = ('position', 'attribute', 'name', 'is_active')
     extra = 0
@@ -487,7 +506,6 @@ class AttributeAdmin(admin.ModelAdmin):
     self_value_variants.short_description = "Варианты значений"
 
 
-
 @admin.register(AttributeValue)
 class AttributeValueAdmin(admin.ModelAdmin):
     model = AttributeValue
@@ -504,7 +522,8 @@ class CategoryCollectionAdmin(nested_admin.NestedModelAdmin):
     readonly_fields = ('id',)
     model = CategoryCollection
     form = CategoryCollectionForm
-    inlines = (ItemOfCustomOrderGroupInline,)
+    inlines = (ItemOfCustomOrderGroupInline, ItemOfCustomOrderShotParametersInline,
+               ItemOfCustomOrderMiniParametersInline)
 
 
 @admin.register(SomeSites)

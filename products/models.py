@@ -652,9 +652,8 @@ class ItemOfCustomOrderGroup(models.Model):
                               verbose_name='Группа атрибутов', related_name='rel_cat_collection_iocog')
     category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
                                             verbose_name='Набор категорий', related_name='rel_group_iocog')
-    is_active = models.BooleanField(default=True, verbose_name='Активно')
+    # is_active = models.BooleanField(default=True, verbose_name='Активно')
     position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
-
     category = models.ForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория')
 
     class Meta:
@@ -663,11 +662,6 @@ class ItemOfCustomOrderGroup(models.Model):
 
     def __str__(self):
         return self.group.name
-
-    # def self_attributes_links(self):
-    #     return self.group.self_attributes_links
-
-    # self_attributes_links.short_description = 'Содержит атрибуты'
 
     def getlink_group(self):
         return self.group.get_link
@@ -685,7 +679,6 @@ class ShotParametersOfProduct(models.Model):
                             verbose_name='Название для кратких характеристик (оставить пустым если названиие атрибута '
                                          'желаете оставить тем же)')
     is_active = models.BooleanField(default=True, verbose_name='Отображать в кратких характеристиках товара')
-
     position = models.PositiveIntegerField("Position", null=True)
 
     class Meta:
@@ -701,7 +694,7 @@ class ShotParametersOfProduct(models.Model):
 
 
 class MiniParametersOfProduct(models.Model):
-    attribute = models.ForeignKey(AttributesInGroup, blank=True, null=True, on_delete=models.CASCADE,
+    attribute = models.ForeignKey(AttributesInGroup, on_delete=models.CASCADE,
                                   verbose_name='Атрибут для отображения в мини характеристиках')
     category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.CASCADE,
                               verbose_name='Категория', related_name='related_mini_attributes')
@@ -721,6 +714,40 @@ class MiniParametersOfProduct(models.Model):
             return f' - {self.name}'
         else:
             return f' - {self.attribute.attribute.name}'
+
+
+class ItemOfCustomOrderShotParameters(models.Model):
+    attribute = models.ForeignKey(ShotParametersOfProduct, on_delete=models.CASCADE,
+                                  verbose_name='Атрибут для отображения в мини характеристиках',
+                                  related_name='rel_cat_collection')
+    category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
+                                            verbose_name='Набор категорий', related_name='rel_miniattr_in_collection')
+    position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
+    category = models.ForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория')
+
+    class Meta:
+        verbose_name = "Атрибут кратких характеристик для набора категорий"
+        verbose_name_plural = "Атрибуты кратких характеристик для набора категорий"
+
+    def __str__(self):
+        return self.attribute.name
+
+
+class ItemOfCustomOrderMiniParameters(models.Model):
+    attribute = models.ForeignKey(MiniParametersOfProduct, on_delete=models.CASCADE,
+                                  verbose_name='Атрибут для отображения в мини характеристиках',
+                                  related_name='rel_cat_collection')
+    category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
+                                            verbose_name='Набор категорий', related_name='rel_shotattr_in_collection')
+    position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
+    category = models.ForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория')
+
+    class Meta:
+        verbose_name = "Атрибут мини-характеристик для набора категорий"
+        verbose_name_plural = "Атрибуты мини-характеристик для набора категорий"
+
+    def __str__(self):
+        return self.attribute.name
 
 
 class SomeSites(models.Model):

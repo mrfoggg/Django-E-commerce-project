@@ -280,8 +280,11 @@ class AttributeForm(forms.ModelForm):
 class CategoryCollectionForm(forms.ModelForm):
     def clean(self):
         print("набор категорий изменен" if self.changed_data else "набор категорий не изменился")
+        init_cat = set() if self.initial=={} else set(self.initial['category_list'])
         cleaned_data = super().clean()
         cat_list = cleaned_data['category_list']
+        print(f"добавлено {list(set(cat_list)-init_cat)}")
+        print(f"удалено {list(init_cat-set(cat_list))}")
         if (len_cat_list := len(cat_list)) < 2:
             raise forms.ValidationError('Коллекция не может состоять менее чем из двух групп')
         cat_list_id_list = cat_list.order_by('mptt_level').values_list('id', flat=True)

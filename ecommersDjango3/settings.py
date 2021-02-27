@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'home',
     'products.apps.ProductsAppConfig',
     'baton.autodiscover',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
