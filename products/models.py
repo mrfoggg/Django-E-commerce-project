@@ -690,7 +690,7 @@ class ShotParametersOfProduct(models.Model):
         if self.name:
             return f' - {self.name}'
         else:
-            return f' - {self.attribute.attribute.name}'
+            return f' - {self.attribute.attribute}'
 
 
 class MiniParametersOfProduct(models.Model):
@@ -730,7 +730,7 @@ class ItemOfCustomOrderShotParameters(models.Model):
         verbose_name_plural = "Атрибуты кратких характеристик для набора категорий"
 
     def __str__(self):
-        return self.attribute.name
+        return self.attribute.attribute.attribute.name
 
 
 class ItemOfCustomOrderMiniParameters(models.Model):
