@@ -307,7 +307,7 @@ class CategoryCollectionForm(forms.ModelForm):
                 print(f"добавлено {list(new_cat_set - init_cat_set)}")
                 last_group_position = ItemOfCustomOrderGroup.objects.filter(
                     category_collection_id=self.instance.id).aggregate(Max('position'))['position__max']
-                add_items(collection_id=self.instance.id, cat_id_list=add_cat_set, max_group=last_group_position)
+                add_items(collection_id=self.instance.id, cat_id_list=add_cat_set, max_group=last_group_position+1)
 
         if new_cat_set != init_cat_set:
             Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,

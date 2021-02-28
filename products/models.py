@@ -721,7 +721,7 @@ class ItemOfCustomOrderShotParameters(models.Model):
                                   verbose_name='Атрибут для отображения в мини характеристиках',
                                   related_name='rel_cat_collection')
     category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
-                                            verbose_name='Набор категорий', related_name='rel_miniattr_in_collection')
+                                            verbose_name='Набор категорий', related_name='rel_miniattr')
     position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
     category = models.ForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория')
 
@@ -738,7 +738,7 @@ class ItemOfCustomOrderMiniParameters(models.Model):
                                   verbose_name='Атрибут для отображения в мини характеристиках',
                                   related_name='rel_cat_collection')
     category_collection = models.ForeignKey('CategoryCollection', on_delete=models.CASCADE,
-                                            verbose_name='Набор категорий', related_name='rel_shotattr_in_collection')
+                                            verbose_name='Набор категорий', related_name='rel_shotattr')
     position = models.PositiveIntegerField("Position", null=True, blank=True, default=0)
     category = models.ForeignKey(Category, blank=True, null=True, on_delete=models.CASCADE, verbose_name='Категория')
 
