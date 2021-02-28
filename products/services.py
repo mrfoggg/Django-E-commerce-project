@@ -5,7 +5,7 @@ from django.db.models import Count, F, Max, Subquery, OuterRef, Q
 from django.utils.safestring import mark_safe
 from collections import namedtuple
 from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, Product, \
-    ProductInCategory, ItemOfCustomOrderGroup
+    ProductInCategory, ItemOfCustomOrderGroup, ItemOfCustomOrderShotParameters
 
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
@@ -277,10 +277,22 @@ class CategoryInProductFormActions:
 
 
 def add_items(collection_id, cat_id_list, max_group=0, max_mini=0, max_shot=0):
+    iocog_create_list = []
+    # for cat_id in cat_id_list:
+    #     ItemOfCustomOrderGroup.objects.bulk_create([
+    #         ItemOfCustomOrderGroup(
+    #             group_id=group_id, category_collection_id=collection_id, category_id=cat_id, position=max_group+i)
+    #         for i, group_id in enumerate(AttrGroup.objects.filter(
+    #             related_categories__category_id=cat_id,
+    #         ).exclude(related_attributes=None).values_list('id', flat=True))])
+
     for cat_id in cat_id_list:
-        ItemOfCustomOrderGroup.objects.bulk_create([
-            ItemOfCustomOrderGroup(
-                group_id=group_id, category_collection_id=collection_id, category_id=cat_id, position=max_group+i)
-            for i, group_id in enumerate(AttrGroup.objects.filter(
-                related_categories__category_id=cat_id,
-            ).exclude(related_attributes=None).values_list('id', flat=True))])
+        groups = AttrGroup.objects.filter(related_categories__category_id=cat_id).exclude(
+            related_attributes=None).values_list('id', flat=True)
+        for group_id in groups:
+            iocog_create_list.append(ItemOfCustomOrderGroup(
+                group_id=group_id, category_collection_id=collection_id, category_id=cat_id,
+                position=max_group))
+            max_group = max_group + 1
+    ItemOfCustomOrderGroup.objects.bulk_create(iocog_create_list)
+
