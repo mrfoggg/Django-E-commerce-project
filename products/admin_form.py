@@ -328,7 +328,6 @@ class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
     def clean(self):
         if self.has_changed():
             for form in self.forms:
-                print(f'form.cleaned_data = {form.cleaned_data}')
                 if 'id' not in form.cleaned_data:
                     form.cleaned_data['DELETE'] = True
 
