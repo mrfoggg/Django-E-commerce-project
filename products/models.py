@@ -661,7 +661,7 @@ class ItemOfCustomOrderGroup(models.Model):
         verbose_name_plural = "Группы атрибутов набора категорий товаров"
 
     def __str__(self):
-        return self.group.name
+        return self.group.name if type(self.group) != 'NoneType' else "удалено"
 
     def getlink_group(self):
         return self.group.get_link

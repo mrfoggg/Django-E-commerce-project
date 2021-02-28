@@ -5,7 +5,7 @@ from django.db.models import Count, F, Max, Subquery, OuterRef, Q
 from django.utils.safestring import mark_safe
 from collections import namedtuple
 from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, Product, \
-    ProductInCategory
+    ProductInCategory, ItemOfCustomOrderGroup
 
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
@@ -22,21 +22,21 @@ def remove_attr_data_from_products(product=None, category=None, attr_group=None,
                 list_of_deleted_collections.append(collection.id)
                 collection.delete()
             else:
-            # находим коллекции которые совпадают с этой укороченной
+                # находим коллекции которые совпадают с этой укороченной
                 other_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
-                    cnt=len(collection.cat_id_list)-1).exclude(id=collection.id)
+                    cnt=len(collection.cat_id_list) - 1).exclude(id=collection.id)
                 for cat in collection.cat_id_list:
                     if cat == category.id:
                         continue
                     other_collection = other_collection.filter(category_list=cat)
-            # помечаем эту коллекцию на удаление и в replaced_collection_dict записываем id коллекции
-            # на какую ее поменять для свазанных товаров (и с какой взять custom_order_group
+                # помечаем эту коллекцию на удаление и в replaced_collection_dict записываем id коллекции
+                # на какую ее поменять для свазанных товаров (и с какой взять custom_order_group
                 if other_collection.exists():
                     replaced_collection_dict[collection.id] = other_collection[0].id
                     # collection.delete()
                 else:
-            # если коллекцию не удалили то помечаем ее как модифицированую чтобы для связаных товаров
-            # обновить custom_order_group согласно изменений в коллекции
+                    # если коллекцию не удалили то помечаем ее как модифицированую чтобы для связаных товаров
+                    # обновить custom_order_group согласно изменений в коллекции
                     list_of_modified_collections.append(collection.id)
         print(list_of_deleted_collections)
         print(replaced_collection_dict)
@@ -65,7 +65,8 @@ def remove_attr_data_from_products(product=None, category=None, attr_group=None,
             if product.category_collection_id in list_of_deleted_collections:
                 product.custom_order_group = []
             if product.category_collection_id in replaced_collection_dict:
-                print(f'коллекция {product.category_collection_id} заменена на {replaced_collection_dict[product.category_collection_id]}')
+                print(
+                    f'коллекция {product.category_collection_id} заменена на {replaced_collection_dict[product.category_collection_id]}')
                 product.category_collection_id = replaced_collection_dict[product.category_collection_id]
                 product.custom_order_group = [
                     [gr.category_id, gr.group_id] for gr in CategoryCollection.objects.get(
@@ -84,13 +85,13 @@ def remove_attr_data_from_products(product=None, category=None, attr_group=None,
                         if cat_and_group[1] == attr_group.id:
                             product.custom_order_group[i].pop()
                             all_data_products_to_update.fields_names_list.append('custom_order_group')
-# select_related
+        # select_related
         for group_id in AttrGroup.objects.filter(related_categories__category=category).values_list('id', flat=True):
             for atr_id in Attribute.objects.filter(related_groups__group=group_id).values_list('id', flat=True):
                 if (full_id := f'{group_id}-{atr_id}') in product.parameters:
                     product.parameters.pop(full_id)
         all_data_products_to_update.products_list.append(product)
-# удалить замененные коллекции
+    # удалить замененные коллекции
     CategoryCollection.objects.filter(id__in=replaced_collection_dict).delete()
     return all_data_products_to_update
 
@@ -273,3 +274,13 @@ class CategoryInProductFormActions:
 
     def _should_delete_form(self, form):
         self._should_delete_form(form)
+
+
+def add_items(collection_id, cat_id_list, max_group=0, max_mini=0, max_shot=0):
+    for cat_id in cat_id_list:
+        ItemOfCustomOrderGroup.objects.bulk_create([
+            ItemOfCustomOrderGroup(
+                group_id=group_id, category_collection_id=collection_id, category_id=cat_id, position=max_group+i)
+            for i, group_id in enumerate(AttrGroup.objects.filter(
+                related_categories__category_id=cat_id,
+            ).exclude(related_attributes=None).values_list('id', flat=True))])

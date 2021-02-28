@@ -1,14 +1,14 @@
 from collections import namedtuple
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.forms import HiddenInput, NumberInput, TextInput
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from .models import AttrGroup, Attribute, Category, CategoryCollection, ItemOfCustomOrderGroup, Product
 
 from .services import CategoryInProductFormActions, get_and_save_product_pos_in_cat, update_addict_attr_values, \
-    remove_attr_data_from_products
+    remove_attr_data_from_products, add_items
 
 
 class ProductAttributesWidget(forms.MultiWidget):
@@ -279,41 +279,42 @@ class AttributeForm(forms.ModelForm):
 
 class CategoryCollectionForm(forms.ModelForm):
     def clean(self):
-        print("набор категорий изменен" if self.changed_data else "набор категорий не изменился")
-        init_cat = set() if self.initial=={} else set(self.initial['category_list'])
+        init_cat_set = set() if self.initial == {} else set([cat.id for cat in self.initial['category_list']])
         cleaned_data = super().clean()
         cat_list = cleaned_data['category_list']
-        print(f"добавлено {list(set(cat_list)-init_cat)}")
-        print(f"удалено {list(init_cat-set(cat_list))}")
+        cat_id_list = cat_list.order_by('mptt_level').values_list('id', flat=True)
+        new_cat_set = set(cat_id_list)
+        self.instance.list_id_deleted_items = None
         if (len_cat_list := len(cat_list)) < 2:
             raise forms.ValidationError('Коллекция не может состоять менее чем из двух групп')
-        cat_list_id_list = cat_list.order_by('mptt_level').values_list('id', flat=True)
         other_same_collection = CategoryCollection.objects.annotate(cnt=Count('category_list')).filter(
             cnt=len_cat_list)
-        for cat_id in cat_list_id_list:
+        for cat_id in cat_id_list:
             other_same_collection = other_same_collection.filter(category_list__id=cat_id)
         if other_same_collection.exclude(id=self.instance.id).exists():
             raise forms.ValidationError('Такой набор категорий уже определен')
         if not self.instance.id:
+            print('созданна коллекция')
             self.save()
-        # if self.instance.id:
-        for cat_id in cat_list_id_list:
-            ItemOfCustomOrderGroup.objects.bulk_create([
-                    ItemOfCustomOrderGroup(
-                        group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id)
-                    for group_id in AttrGroup.objects.filter(
-                        related_categories__category_id=cat_id,
-                        ).exclude(related_attributes=None).values_list('id', flat=True)
-                    if not ItemOfCustomOrderGroup.objects.filter(
-                        group_id=group_id, category_collection_id=self.instance.id, category_id=cat_id).exists()])
-        new_set = set(cat_list_id_list)
-        old_set = set(Category.objects.filter().values_list('id', flat=True))
-        if old_set != new_set:
+            add_items(collection_id=self.instance.id, cat_id_list=cat_id_list)
+        else:
+            print("набор категорий изменен" if self.changed_data else "набор категорий не изменился")
+            if delete_cat_set := (init_cat_set - new_cat_set):
+                print(f"удалено {delete_cat_set}")
+                ItemOfCustomOrderGroup.objects.filter(category_collection_id=self.instance.id,
+                                                      category_id__in=delete_cat_set).delete()
+            if add_cat_set := (new_cat_set - init_cat_set):
+                print(f"добавлено {list(new_cat_set - init_cat_set)}")
+                last_group_position = ItemOfCustomOrderGroup.objects.filter(
+                    category_collection_id=self.instance.id).aggregate(Max('position'))['position__max']
+                add_items(collection_id=self.instance.id, cat_id_list=add_cat_set, max_group=last_group_position)
+
+        if new_cat_set != init_cat_set:
             Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
                                                                                    custom_order_group=[])
         products_add = Product.objects.exclude(category_collection_id=self.instance.id).annotate(
             cnt=Count('related_categories')).filter(cnt=len_cat_list)
-        for cat_id in cat_list_id_list:
+        for cat_id in cat_id_list:
             products_add = products_add.filter(related_categories__category_id=cat_id)
         products_add.update(category_collection_id=self.instance.id)
 
@@ -325,13 +326,20 @@ class CategoryCollectionForm(forms.ModelForm):
 
 class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
     def clean(self):
-        super().clean()
-        custom_order_list = [
-            [form.cleaned_data['position'], form.cleaned_data['id'].category_id, form.cleaned_data['id'].group_id]
-            for form in self.forms]
-        custom_order_list.sort()
-        group_list = [x[1:] for x in custom_order_list]
-        if self.instance.is_active_custom_order_group:
-            Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
-        else:
-            Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
+        if self.has_changed():
+            for form in self.forms:
+                print(f'form.cleaned_data = {form.cleaned_data}')
+                if 'id' not in form.cleaned_data:
+                    form.cleaned_data['DELETE'] = True
+
+            custom_order_list = [
+                [form.cleaned_data['position'], form.cleaned_data['id'].category_id, form.cleaned_data['id'].group_id]
+                for form in self.forms
+                if not form.cleaned_data['DELETE']
+            ]
+            custom_order_list.sort()
+            group_list = [x[1:] for x in custom_order_list]
+            if self.instance.is_active_custom_order_group:
+                Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
+            else:
+                Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
