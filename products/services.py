@@ -1,11 +1,12 @@
 import copy
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ValidationError
-from django.db.models import Count, F, Max, Subquery, OuterRef, Q
+from django.db.models import Count, F, Max, Subquery, OuterRef, Q, Prefetch
 from django.utils.safestring import mark_safe
 from collections import namedtuple
-from .models import AttrGroup, Attribute, AttributesInGroup, AttributeValue, CategoryCollection, Product, \
-    ProductInCategory, ItemOfCustomOrderGroup, ItemOfCustomOrderShotParameters, ShotParametersOfProduct
+from .models import (AttrGroup, Attribute, AttributesInGroup, AttributeValue, Category, CategoryCollection, Product,
+                     ProductInCategory, ItemOfCustomOrderGroup, ItemOfCustomOrderShotParameters,
+                     ItemOfCustomOrderMiniParameters, AttrGroupInCategory)
 
 
 def remove_attr_data_from_products(product=None, category=None, attr_group=None, attr=None):
@@ -233,15 +234,15 @@ class CategoryInProductFormActions:
 
         this_category_shot_attributes = category.related_shot_attributes.all()
         if this_category_shot_attributes.exists():
-            product.shot_parameters_structure[category_id] = {
+            product.shot_parameters_structure |= {category_id: {
                 'cat_position': position_category, 'attributes':
-                    build_custom_attributes_structure_field_data(this_category_shot_attributes)}
+                    build_custom_attributes_structure_field_data(this_category_shot_attributes)}}
 
         this_category_mini_attributes = category.related_mini_attributes.all()
         if this_category_mini_attributes.exists():
-            product.mini_parameters_structure[category_id] = {
+            product.mini_parameters_structure |= {category_id: {
                 'cat_position': position_category, 'attributes':
-                    build_custom_attributes_structure_field_data(this_category_mini_attributes)}
+                    build_custom_attributes_structure_field_data(this_category_mini_attributes)}}
         next_position = 0 if (max_pos := product_in_cat_qs['position_product__max']) is None else max_pos + 1
         return next_position if product else 'all_data_products_to_update'
 
@@ -280,21 +281,35 @@ def add_items(collection_id, cat_id_list, max_group=0, max_mini=0, max_shot=0):
     iocog_create_list = []
     ioshot_create_list = []
     iomini_create_list = []
+    not_empty_groups = Prefetch('related_groups',
+                                queryset=AttrGroupInCategory.objects.exclude(group__related_attributes=None),
+                                to_attr='groups_with_position')
+    categories = Category.objects.filter(id__in=cat_id_list).only('id').prefetch_related(
+        not_empty_groups, 'related_shot_attributes', 'related_mini_attributes').annotate(
+        max_group_position=Max('related_groups__position'),
+        max_shot_position=Max('related_shot_attributes__position'),
+        max_mini_position=Max('related_mini_attributes__position')
+    )
 
-    for cat_id in cat_id_list:
-        groups = AttrGroup.objects.filter(related_categories__category_id=cat_id).exclude(
-            related_attributes=None).values_list('id', flat=True)
-        for group_id in groups:
+    for cat in categories:
+        for group in cat.groups_with_position:
             iocog_create_list.append(ItemOfCustomOrderGroup(
-                group_id=group_id, category_collection_id=collection_id, category_id=cat_id,
-                position=max_group))
-            max_group = max_group + 1
-        for shot_atr in ShotParametersOfProduct.objects.filter(category_id=cat_id):
-            ioshot_create_list.append(ItemOfCustomOrderShotParameters(
-                attribute=shot_atr, category_collection_id=collection_id, category_id=cat_id,
-                position=max_shot
+                group_id=group.group_id, category_collection_id=collection_id, category_id=cat.id,
+                position=max_group + group.position
             ))
-            max_shot = max_shot + 1
+        max_group += cat.max_group_position + 1
+        for shot_attr in cat.related_shot_attributes.all():
+            ioshot_create_list.append(ItemOfCustomOrderShotParameters(
+                attribute=shot_attr, category_collection_id=collection_id, category_id=cat.id,
+                position=max_shot + shot_attr.position
+            ))
+        max_shot += cat.max_shot_position + 1
+        for mini_attr in cat.related_mini_attributes.all():
+            iomini_create_list.append(ItemOfCustomOrderMiniParameters(
+                attribute=mini_attr, category_collection_id=collection_id, category_id=cat.id,
+                position=max_mini + mini_attr.position
+            ))
+        max_mini += cat.max_mini_position + 1
+
     ItemOfCustomOrderGroup.objects.bulk_create(iocog_create_list)
     ItemOfCustomOrderShotParameters.objects.bulk_create(ioshot_create_list)
-

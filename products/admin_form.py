@@ -307,7 +307,7 @@ class CategoryCollectionForm(forms.ModelForm):
                 print(f"добавлено {list(new_cat_set - init_cat_set)}")
                 last_group_position = ItemOfCustomOrderGroup.objects.filter(
                     category_collection_id=self.instance.id).aggregate(Max('position'))['position__max']
-                add_items(collection_id=self.instance.id, cat_id_list=add_cat_set, max_group=last_group_position+1)
+                add_items(collection_id=self.instance.id, cat_id_list=add_cat_set, max_group=last_group_position + 1)
 
         if new_cat_set != init_cat_set:
             Product.objects.filter(category_collection_id=self.instance.id).update(category_collection_id=None,
@@ -324,21 +324,61 @@ class CategoryCollectionForm(forms.ModelForm):
         }
 
 
+def get_custom_ordered_data(form_instance, get_item_id_function):
+    # проверка на случай если строка удалена вследствие удаления категории и коллекции
+    for form in form_instance.forms:
+        if 'id' not in form.cleaned_data:
+            form.cleaned_data['DELETE'] = True
+    if form_instance.total_form_count() - len(form_instance.deleted_forms) > 1:
+        custom_order_list = [
+            [form.cleaned_data['position'], form.cleaned_data['id'].category_id,
+             get_item_id_function(form.cleaned_data['id'])]
+            for form in form_instance.forms
+            if not form.cleaned_data['DELETE']
+        ]
+        custom_order_list.sort()
+        return [x[1:] for x in custom_order_list]
+    else:
+        return False
+
+
 class ItemOfCustomOrderGroupInLineFormSet(forms.models.BaseInlineFormSet):
     def clean(self):
         if self.has_changed():
-            for form in self.forms:
-                if 'id' not in form.cleaned_data:
-                    form.cleaned_data['DELETE'] = True
+            group_custom_ordered_list = get_custom_ordered_data(self, lambda x: x.group_id)
+            if group_custom_ordered_list:
+                if self.instance.is_active_custom_order_group:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(
+                        custom_order_group=group_custom_ordered_list)
+                else:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
 
-            custom_order_list = [
-                [form.cleaned_data['position'], form.cleaned_data['id'].category_id, form.cleaned_data['id'].group_id]
-                for form in self.forms
-                if not form.cleaned_data['DELETE']
-            ]
-            custom_order_list.sort()
-            group_list = [x[1:] for x in custom_order_list]
-            if self.instance.is_active_custom_order_group:
-                Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=group_list)
-            else:
-                Product.objects.filter(category_collection_id=self.instance.id).update(custom_order_group=[])
+
+class ItemOfCustomOrderShotParametersInLineFormSet(forms.models.BaseInlineFormSet):
+    def clean(self):
+        if self.has_changed():
+            shot_attr_custom_ordered_list = get_custom_ordered_data(
+                self, lambda x: f'{x.attribute.attribute.group_id}-{x.attribute.attribute.attribute_id}')
+            if shot_attr_custom_ordered_list:
+                if self.instance.is_active_custom_order_shot_parameters:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(
+                        shot_parameters_custom_structure=shot_attr_custom_ordered_list)
+                else:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(
+                        shot_parameters_custom_structure=[])
+
+
+class ItemOfCustomOrderMiniParametersInLineFormSet(forms.models.BaseInlineFormSet):
+    def clean(self):
+        if self.has_changed():
+            mini_attr_custom_ordered_list = get_custom_ordered_data(
+                self, lambda x: f'{x.attribute.attribute.group_id}-{x.attribute.attribute.attribute_id}')
+            if mini_attr_custom_ordered_list:
+                if self.instance.is_active_custom_order_mini_parameters:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(
+                        mini_parameters_custom_structure=mini_attr_custom_ordered_list)
+                else:
+                    Product.objects.filter(category_collection_id=self.instance.id).update(
+                        mini_parameters_custom_structure=[])
+
+

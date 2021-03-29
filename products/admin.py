@@ -7,8 +7,9 @@ from django.http import HttpResponseRedirect
 from django_summernote.admin import SummernoteModelAdmin
 from mptt.admin import DraggableMPTTAdmin, TreeRelatedFieldListFilter
 
-from .admin_form import AttrGroupForm, AttributeForm, CategoriesInGroupInlineFormSet, CategoryCollectionForm, \
-    CategoryForProductInLineFormSet, ItemOfCustomOrderGroupInLineFormSet, ProductForm
+from .admin_form import (AttrGroupForm, AttributeForm, CategoriesInGroupInlineFormSet, CategoryCollectionForm,
+                         CategoryForProductInLineFormSet, ItemOfCustomOrderGroupInLineFormSet, ProductForm,
+                         ItemOfCustomOrderShotParametersInLineFormSet)
 
 from .models import *
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -128,7 +129,7 @@ class AttributesInGroupInline(nested_admin.SortableHiddenMixin, nested_admin.Nes
         queryset = super().get_queryset(request)
         return queryset.annotate(
             s_value_variants_names_list=ArrayAgg('attribute__value_list__name'),
-            s_value_variants_id_list=ArrayAgg('attribute__value_list__id'),)
+            s_value_variants_id_list=ArrayAgg('attribute__value_list__id'), )
 
     def self_value_variants(self, obj):
         value_variants_links_list = [
@@ -173,16 +174,17 @@ class ItemOfCustomOrderGroupInline(nested_admin.SortableHiddenMixin, nested_admi
 
 
 class ItemOfCustomOrderShotParametersInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    fields = ('position', 'category', 'attribute', )
+    fields = ('position', 'category', 'attribute',)
     readonly_fields = ('category', 'attribute',)
     model = ItemOfCustomOrderShotParameters
-    formset = ItemOfCustomOrderGroupInLineFormSet
+    formset = ItemOfCustomOrderShotParametersInLineFormSet
     sortable_field_name = "position"
     ordering = ('position',)
     extra = 0
 
+
 class ItemOfCustomOrderMiniParametersInline(nested_admin.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    fields = ('position', 'category', 'attribute', )
+    fields = ('position', 'category', 'attribute',)
     readonly_fields = ('category', 'attribute',)
     model = ItemOfCustomOrderMiniParameters
     formset = ItemOfCustomOrderGroupInLineFormSet
@@ -231,7 +233,6 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
                 'fields': (
                     ('name', 'parent'),
                     ('slug', 'id', 'is_active'),
-                    ('created', 'updated'),
                 ),
                 'classes': ('tab-fs-none',)
             }
@@ -263,7 +264,7 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
     list_display = ('tree_actions', 'indented_title', 'self_attribute_groups',)
     model = Category
     prepopulated_fields = {"slug": ("name",)}
-    readonly_fields = ('id', 'created', 'updated', 'self_attribute_groups',)
+    readonly_fields = ('id', 'self_attribute_groups',)
     inlines = (
         ShotParametersOfProductInline, MiniParametersOfProductInline, AttrGroupInCategoryInline,
         ProductInCategoryInLine)
@@ -279,7 +280,7 @@ class CategoryModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin, Dr
         queryset = super().get_queryset(request)
         return queryset.annotate(
             s_attribute_group_names_list=ArrayAgg('related_groups__group__name'),
-            s_attribute_group_id_list=ArrayAgg('related_groups__group__id'),)
+            s_attribute_group_id_list=ArrayAgg('related_groups__group__id'), )
 
     def self_attribute_groups(self, obj):
         group_links_list = [
@@ -340,7 +341,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     list_editable = ("rating", 'is_active',)
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = (
-        'created', 'updated', 'category_collection', 'get_category_collection_link', 'get_shot_parameters_admin_field',
+        'category_collection', 'get_category_collection_link', 'get_shot_parameters_admin_field',
         'get_mini_parameters_admin_field')
     list_filter = (('admin_category', TreeRelatedFieldListFilter), 'brand')
     inlines = (ProductImageInline, CategoryForProductInLine, PricesOtherShopInline)
@@ -350,7 +351,7 @@ class ProductModelAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
             'fields': (
                 ('name', 'art',), ('slug', 'admin_category'),
                 ('brand', 'is_active',),
-                ('created', 'updated',),),
+            ),
             'classes': ('tab-fs-none',),
         }),
 
@@ -494,7 +495,7 @@ class AttributeAdmin(admin.ModelAdmin):
         queryset = super().get_queryset(request)
         return queryset.annotate(
             s_value_variants_names_list=ArrayAgg('value_list__name'),
-            s_value_variants_id_list=ArrayAgg('value_list__id'),)
+            s_value_variants_id_list=ArrayAgg('value_list__id'), )
 
     def self_value_variants(self, obj):
         value_variants_links_list = [

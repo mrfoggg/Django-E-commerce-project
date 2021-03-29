@@ -12,10 +12,10 @@ from .utils import get_unique_slug
 class Category(MPTTModel):
     name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
-    created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
-    updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
     parent = TreeForeignKey('self', blank=True, null=True, default=None, on_delete=models.CASCADE,
                             related_name='children', db_index=True, verbose_name='Родительская категория')
+    groups = TreeManyToManyField('AttrGroup', through='AttrGroupInCategory', through_fields=('category', 'group'),
+                                 related_name='categories')
     slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
     description = models.TextField(blank=True, null=True, default=None, verbose_name='Описание категории')
     image = models.ImageField(upload_to='category_images/', blank=True, null=True, verbose_name='Фото категории')
@@ -77,8 +77,6 @@ class Product(models.Model):
     )
     name = models.CharField(max_length=128, default=None, unique=True, db_index=True, verbose_name='Название')
     is_active = models.BooleanField(default=True, verbose_name='Активно')
-    created = models.DateTimeField(auto_now_add=True, auto_now=False, verbose_name='Добавлено')
-    updated = models.DateTimeField(auto_now_add=False, auto_now=True, verbose_name='Изменено')
     slug = models.SlugField(max_length=128, blank=True, null=True, default=None, unique=True)
     art = models.CharField(max_length=10, blank=True, null=True, default=None, unique=True,
                            verbose_name='Артикул товара')
@@ -90,6 +88,8 @@ class Product(models.Model):
     rating = models.SmallIntegerField(choices=RATING, default=1, db_index=True)
     admin_category = TreeForeignKey(Category, blank=True, null=True, default=None, on_delete=models.SET_NULL,
                                     verbose_name='Категория товаров админ-панели')
+    categories = TreeManyToManyField(Category, through='ProductInCategory', through_fields=('product', 'category'),
+                                     related_name='products')
     category_collection = models.ForeignKey('CategoryCollection', blank=True, null=True, default=None,
                                             on_delete=models.SET_NULL, verbose_name='Коллекция категорий')
     parameters = models.JSONField(default=dict, blank=True, verbose_name='Характеристики товара')
@@ -167,7 +167,7 @@ class Product(models.Model):
                     )
                     for attr_d in sorted(attr_category["attributes"].items(), key=lambda attr: attr[1]["pos_atr"])
                 ])
-                return addict_attr_sorted_list
+            return addict_attr_sorted_list
         else:
             return []
 
@@ -688,9 +688,9 @@ class ShotParametersOfProduct(models.Model):
 
     def __str__(self):
         if self.name:
-            return f' - {self.name}'
+            return f'{self.attribute.group} - {self.name}'
         else:
-            return f' - {self.attribute.attribute}'
+            return f'{self.attribute.group} - {self.attribute.attribute}'
 
 
 class MiniParametersOfProduct(models.Model):
